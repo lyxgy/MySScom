@@ -25,7 +25,6 @@ BEGIN_MESSAGE_MAP(CDialogAutoReply, CWnd)
 	ON_WM_CLOSE()
 	ON_BN_CLICKED(IDC_BUTTON_CLEARALL, &CDialogAutoReply::OnBnClickedButtonClearall)
 	ON_BN_CLICKED(IDC_BUTTON_SAVESTR, &CDialogAutoReply::OnBnClickedButtonSavestr)
-	ON_BN_CLICKED(IDC_BUTTON1, &CDialogAutoReply::OnBnClickedButton1)
 END_MESSAGE_MAP()
 
 

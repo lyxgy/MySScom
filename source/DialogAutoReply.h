@@ -48,7 +48,7 @@ public:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnBnClickedButtonClearall();
 	afx_msg void OnBnClickedButtonSavestr();
-	afx_msg void OnBnClickedButton1();
+	
 };
 
 

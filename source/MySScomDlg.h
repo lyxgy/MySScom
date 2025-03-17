@@ -265,26 +265,6 @@ private:
 	void DecodeData(const CString& data);
 
 public:
-	afx_msg void OnEnChangeEdit1();
-	afx_msg void OnEnChangeEdit2();
-	afx_msg void OnEnChangeEdit3();
-	afx_msg void OnEnChangeEdit4();
-	afx_msg void OnCbnSelchangeComboCommport();
-	afx_msg void OnBnClickedButton1();
-	//新增
-	//文本框
-	CString m_strEdit1; 
-	CRichEditCtrl m_RichEditCtrl; 
-	CString m_strEdit2; 
-	CRichEditCtrl m_RichEditCtr2; 
-	CString m_strEdit3; 
-	CRichEditCtrl m_RichEditCtr3; 
-	CString m_strEdit4; 
-	CRichEditCtrl m_RichEditCtr4; 
-
-	//按钮
-	CButton m_btnclick1;
-
 	afx_msg void OnEnChangeEditRecvcstr();
 };
 

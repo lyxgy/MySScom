@@ -125,12 +125,6 @@ BEGIN
     PUSHBUTTON      "ÅäÖÃ",IDC_BUTTON_SETREPLY,73,166,25,12,WS_DISABLED
     CONTROL         "¹Ø¼ü×Ö·û¼àÌý",IDC_CHECK_KEYWORDS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,232,61,9
     PUSHBUTTON      "ÅäÖÃ",IDC_BUTTON_KEYWORD,73,230,25,12,WS_DISABLED
-    EDITTEXT        IDC_EDIT1,157,20,55,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_EDIT2,156,52,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_EDIT3,297,20,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_EDIT4,302,53,40,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "r",IDC_BUTTON1,228,20,33,14
-    LTEXT           "dddskvfvfv",IDC_STATIC,221,55,41,8
 END
 
 IDD_DIALOG_SUPERSEND DIALOG 0, 0, 395, 307
@@ -597,61 +591,7 @@ END
 
 IDD_MYSSCOM_DIALOG AFX_DIALOG_LAYOUT
 BEGIN
-    0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 100, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0
+    0
 END
 
 
