@@ -335,13 +335,13 @@ void CMySScomDlg::OnTimer(UINT nIDEvent)
 		break;
 
 	case Timer_No_FrameDspl: // 16进制下按帧换行显示判定
-    KillTimer(Timer_No_FrameDspl);
-    if (m_Check_ShowTime == TRUE) {
-        UpdateEditStr(GetHighExactTime() + "\r\n"); // 添加时间戳并换行
-    } else {
-        UpdateEditStr("\r\n"); // 直接换行
-    }
-    s_NeedChgLne = TRUE; // 标志下次需要换行显示
+		KillTimer(Timer_No_FrameDspl);
+		if (m_Check_ShowTime == TRUE) {
+			UpdateEditStr(GetHighExactTime() + "\r\n"); // 添加时间戳并换行
+		} else {
+			UpdateEditStr("\r\n"); // 直接换行
+		}
+		s_NeedChgLne = TRUE; // 标志下次需要换行显示
     break;
 
 	case Timer_No_SendFile:                                                /* 发送文件数据 */
@@ -861,94 +861,6 @@ bool CMySScomDlg::SendFileDatatoComm(void)
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 //初始化函数
-//扫描串口
-/**************************************************************************************************
-**  函数名称:  EnumCommPortList
-**  功能描述:  本函数用来枚举电脑上存在可用的串口
-**************************************************************************************************/
-BOOL CMySScomDlg::EnumCommPortList(void)
-{
-	HKEY    hSERIALCOMM;
-	BOOL    bSuccess = FALSE;
-	CString comstr;
-	bool    newone;
-
-	s_PortNumber.RemoveAll();
-
-	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("HARDWARE\\DEVICEMAP\\SERIALCOMM"), 0, KEY_QUERY_VALUE, &hSERIALCOMM) == ERROR_SUCCESS) {
-
-		DWORD dwMaxValueNameLen;
-		DWORD dwMaxValueLen;
-		DWORD dwQueryInfo = RegQueryInfoKey(hSERIALCOMM, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &dwMaxValueNameLen, &dwMaxValueLen, NULL, NULL);
-
-		if (dwQueryInfo == ERROR_SUCCESS) {
-
-			DWORD dwMaxValueNameSizeInChars = dwMaxValueNameLen + 1;
-			DWORD dwMaxValueNameSizeInBytes = dwMaxValueNameSizeInChars * sizeof(TCHAR);
-			DWORD dwMaxValueDataSizeInChars = dwMaxValueLen / sizeof(TCHAR) + 1;
-			DWORD dwMaxValueDataSizeInBytes = dwMaxValueDataSizeInChars * sizeof(TCHAR);
-
-			TCHAR* szValueName;
-			BYTE* byValue;
-
-			if ((szValueName = (TCHAR*)malloc(dwMaxValueNameSizeInChars)) && (byValue = (BYTE*)malloc(dwMaxValueDataSizeInBytes))) {
-
-				bSuccess = TRUE;
-
-				DWORD dwIndex = 0;
-				DWORD dwType;
-				DWORD dwValueNameSize = dwMaxValueNameSizeInChars;
-				DWORD dwDataSize = dwMaxValueDataSizeInBytes;
-
-				memset(szValueName, 0, dwMaxValueNameSizeInBytes);
-				memset(byValue, 0, dwMaxValueDataSizeInBytes);
-
-				LONG nEnum = RegEnumValue(hSERIALCOMM, dwIndex, szValueName, &dwValueNameSize, NULL, &dwType, byValue, &dwDataSize);
-
-				//处理串口名字
-				while (nEnum == ERROR_SUCCESS) {
-
-					if (dwType == REG_SZ) {
-						TCHAR* szPort = (TCHAR*)(byValue);
-
-						newone = TRUE;
-
-						for (int i = 0; i < s_PortNumber.GetSize(); i++) {     /* 这段话是用来剔除名称一样的重复项 */
-							comstr = s_PortNumber.GetAt(i);
-							if (comstr == szPort) {
-								newone = FALSE;
-							}
-						}
-						if (newone == TRUE) {
-							s_PortNumber.Add(szPort);
-						}
-					}
-
-					dwValueNameSize = dwMaxValueNameSizeInChars;
-					dwDataSize = dwMaxValueDataSizeInBytes;
-					memset(szValueName, 0, dwMaxValueNameSizeInBytes);
-					memset(byValue, 0, dwMaxValueDataSizeInBytes);
-					++dwIndex;
-					nEnum = RegEnumValue(hSERIALCOMM, dwIndex, szValueName, &dwValueNameSize, NULL, &dwType, byValue, &dwDataSize);
-				}
-
-				free(szValueName);
-				free(byValue);
-			}
-			else {
-				SetLastError(ERROR_OUTOFMEMORY);
-			}
-		}
-
-		RegCloseKey(hSERIALCOMM);
-
-		if (dwQueryInfo != ERROR_SUCCESS) {
-			SetLastError(dwQueryInfo);
-		}
-	}
-
-	return bSuccess;
-}
 
 /**************************************************************************************************
 **  函数名称:  OnUsrMsgHdlComDevList
@@ -2214,10 +2126,99 @@ void CMySScomDlg::OnCheckKeyword()
 	}
 }
 
-//编辑框内容显示
+//编辑框显示数据
+/**************************************************************************************************
+**  函数名称:  EnumCommPortList
+**  功能描述:  本函数用来枚举电脑上存在可用的串口
+**************************************************************************************************/
+BOOL CMySScomDlg::EnumCommPortList(void)
+{
+	HKEY    hSERIALCOMM;
+	BOOL    bSuccess = FALSE;
+	CString comstr;
+	bool    newone;
+
+	s_PortNumber.RemoveAll();
+	//打开注册表
+	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("HARDWARE\\DEVICEMAP\\SERIALCOMM"), 0, KEY_QUERY_VALUE, &hSERIALCOMM) == ERROR_SUCCESS) {
+
+		DWORD dwMaxValueNameLen;
+		DWORD dwMaxValueLen;
+		//读取串口数据
+		DWORD dwQueryInfo = RegQueryInfoKey(hSERIALCOMM, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &dwMaxValueNameLen, &dwMaxValueLen, NULL, NULL);
+
+		if (dwQueryInfo == ERROR_SUCCESS) {
+
+			DWORD dwMaxValueNameSizeInChars = dwMaxValueNameLen + 1;
+			DWORD dwMaxValueNameSizeInBytes = dwMaxValueNameSizeInChars * sizeof(TCHAR);
+			DWORD dwMaxValueDataSizeInChars = dwMaxValueLen / sizeof(TCHAR) + 1;
+			DWORD dwMaxValueDataSizeInBytes = dwMaxValueDataSizeInChars * sizeof(TCHAR);
+
+			TCHAR* szValueName;
+			BYTE* byValue;
+
+			if ((szValueName = (TCHAR*)malloc(dwMaxValueNameSizeInChars)) && (byValue = (BYTE*)malloc(dwMaxValueDataSizeInBytes))) {
+
+				bSuccess = TRUE;
+
+				DWORD dwIndex = 0;
+				DWORD dwType;
+				DWORD dwValueNameSize = dwMaxValueNameSizeInChars;
+				DWORD dwDataSize = dwMaxValueDataSizeInBytes;
+
+				memset(szValueName, 0, dwMaxValueNameSizeInBytes);
+				memset(byValue, 0, dwMaxValueDataSizeInBytes);
+
+				LONG nEnum = RegEnumValue(hSERIALCOMM, dwIndex, szValueName, &dwValueNameSize, NULL, &dwType, byValue, &dwDataSize);
+
+				//处理串口名字
+				while (nEnum == ERROR_SUCCESS) {
+
+					if (dwType == REG_SZ) {
+						TCHAR* szPort = (TCHAR*)(byValue);
+
+						newone = TRUE;
+
+						for (int i = 0; i < s_PortNumber.GetSize(); i++) {     /* 这段话是用来剔除名称一样的重复项 */
+							comstr = s_PortNumber.GetAt(i);
+							if (comstr == szPort) {
+								newone = FALSE;
+							}
+						}
+						if (newone == TRUE) {
+							s_PortNumber.Add(szPort);
+						}
+					}
+
+					dwValueNameSize = dwMaxValueNameSizeInChars;
+					dwDataSize = dwMaxValueDataSizeInBytes;
+					memset(szValueName, 0, dwMaxValueNameSizeInBytes);
+					memset(byValue, 0, dwMaxValueDataSizeInBytes);
+					++dwIndex;
+					nEnum = RegEnumValue(hSERIALCOMM, dwIndex, szValueName, &dwValueNameSize, NULL, &dwType, byValue, &dwDataSize);
+				}
+
+				free(szValueName);
+				free(byValue);
+			}
+			else {
+				SetLastError(ERROR_OUTOFMEMORY);
+			}
+		}
+
+		RegCloseKey(hSERIALCOMM);
+
+		if (dwQueryInfo != ERROR_SUCCESS) {
+			SetLastError(dwQueryInfo);
+		}
+	}
+	//返回读取成功
+	return bSuccess;
+}
+
 /**************************************************************************************************
 **  函数名称:  HandleUSARTData
-**  功能描述:  接收串口数据
+**  功能描述:  处理串口数据
 **************************************************************************************************/
 void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 {
@@ -2232,12 +2233,7 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 	for (i = 0; i < len; i++) {                                                /* 将数组转换为Cstring型变量 */
 
 		if (m_Check_HexDispl == TRUE) {                                        /* 当前处于16进制显示模式 */
-			if (s_NeedChgLne == TRUE) {                                        /* 如果接收完一整行 */
-				if (m_Check_ShowTime == TRUE) {                                /* 如果启用了时间显示功能 */
-					ShowStr = ShowStr + GetHighExactTime();
-				}
-				s_NeedChgLne = FALSE;
-			}
+			
 			/* 考虑到00字符的特殊性，需要对其进行转义才能存储。转义规则如下：00转义成FF 01，FF转义成FF 02，其他字符不转义 */
 
 			if (sbuf[i] == 0) {                                                /* 00 转义成 FF 01 */
