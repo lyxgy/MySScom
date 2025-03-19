@@ -2231,17 +2231,9 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 	if (s_RecvPaused == TRUE) return;                                          /* 暂停接收时，不进行处理 */
 
 	for (i = 0; i < len; i++) {                                                /* 将数组转换为Cstring型变量 */
-		
-		if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {				/* 如果需要换行显示 */
-			ShowStr += GetHighExactTime() + TempStr;
-			s_NeedChgLne = FALSE;
-		}
-		else {
-			ShowStr += TempStr;
-		}
 
 		if (m_Check_HexDispl == TRUE) {                                        /* 当前处于16进制显示模式 */
-			
+
 			/* 考虑到00字符的特殊性，需要对其进行转义才能存储。转义规则如下：00转义成FF 01，FF转义成FF 02，其他字符不转义 */
 
 			if (sbuf[i] == 0) {                                                /* 00 转义成 FF 01 */
@@ -2256,31 +2248,43 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 
 			TempStr = TransformtoHex(TempStr);                                 /* 转换结果为16进制显示 */
 
-			
-
 			if (m_Check_HexFrame == TRUE) {                                    /* 这里判断接下来一段时间内是否没有再收到其他数据 */
 				KillTimer(Timer_No_FrameDspl);                                 /* 以实现16进制下，按帧换行显示的功能 */
 				SetTimer(Timer_No_FrameDspl, CHNGLINE_INTERVAL, NULL);         /* 这里重新启动定时器判断是否没有再收到其他数据 */
 			}
 
-			
-			if (TempStr == "\n") {                                             /* 本次接收到回车符 */
+			if (sbuf[i] == '\n') {                                             /* 本次接收到回车符 */
 				s_NeedChgLne = TRUE;                                           /* 标记需要换行显示 */
 			}
 
+			// 添加数据部分
+			ShowStr += TempStr;
+
+			// 如果需要换行显示，并且启用了时间戳
+			if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {        /* 如果需要换行显示 */
+				TimeStr = GetHighExactTime();                                    /* 获取时间戳 */
+				ShowStr += "\n" + TimeStr + " ";                                 /* 添加时间戳（字符形式） */
+				s_NeedChgLne = FALSE;
+			}
 		}
 		else {                                                               /* 当前处于字符显示模式 */
 
 			TempStr.Format("%c", sbuf[i]);                                     /* 处理接收到的数据 */
-			ShowStr += TempStr;                                                /* 保存数据内容 */
 
-			if (TempStr == "\n") {                                             /* 本次接收到回车符 */
+			if (sbuf[i] == '\n') {                                             /* 本次接收到回车符 */
 				s_NeedChgLne = TRUE;                                           /* 标记需要换行显示 */
 			}
+
+			// 添加数据部分
+			ShowStr += TempStr;
+
+			// 如果需要换行显示，并且启用了时间戳
+			if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {        /* 如果需要换行显示 */
+				TimeStr = GetHighExactTime();                                    /* 获取时间戳 */
+				ShowStr += "\n" + TimeStr + " ";                                 /* 添加时间戳（字符形式） */
+				s_NeedChgLne = FALSE;
+			}
 		}
-
-		
-
 	}
 
 	s_RecvedByte += len;                                                       /* 接收字节数累加 */
