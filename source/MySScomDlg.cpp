@@ -30,7 +30,7 @@ static const int    Combo_Check[5] = {0,    1,    2,    3,   4};
 //	3.检查版本兼容性函数
 //5.控件消息处理
 //	1.控件状态设置
-//	2.①编辑框内容显示
+//	2.①编辑框显示数据
 //	3.④协议编写
 //	4.托盘右键菜单
 
@@ -2231,6 +2231,14 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 	if (s_RecvPaused == TRUE) return;                                          /* 暂停接收时，不进行处理 */
 
 	for (i = 0; i < len; i++) {                                                /* 将数组转换为Cstring型变量 */
+		
+		if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {				/* 如果需要换行显示 */
+			ShowStr += GetHighExactTime() + TempStr;
+			s_NeedChgLne = FALSE;
+		}
+		else {
+			ShowStr += TempStr;
+		}
 
 		if (m_Check_HexDispl == TRUE) {                                        /* 当前处于16进制显示模式 */
 			
@@ -2248,14 +2256,7 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 
 			TempStr = TransformtoHex(TempStr);                                 /* 转换结果为16进制显示 */
 
-			if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {        /* 如果需要换行显示 */
-				ShowStr += GetHighExactTime() + TempStr;
-				s_NeedChgLne = FALSE;
-			}
-			else {
-				ShowStr += TempStr;
-			}
-
+			
 
 			if (m_Check_HexFrame == TRUE) {                                    /* 这里判断接下来一段时间内是否没有再收到其他数据 */
 				KillTimer(Timer_No_FrameDspl);                                 /* 以实现16进制下，按帧换行显示的功能 */
@@ -2270,15 +2271,6 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 		}
 		else {                                                               /* 当前处于字符显示模式 */
 
-			if (s_NeedChgLne == TRUE) {                                        /* 如果接收完一整行 */
-
-				if (m_Check_ShowTime == TRUE) {                                /* 如果启用了时间显示功能 */
-					ShowStr = ShowStr + GetHighExactTime();
-				}
-
-				s_NeedChgLne = FALSE;
-			}
-
 			TempStr.Format("%c", sbuf[i]);                                     /* 处理接收到的数据 */
 			ShowStr += TempStr;                                                /* 保存数据内容 */
 
@@ -2286,6 +2278,9 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 				s_NeedChgLne = TRUE;                                           /* 标记需要换行显示 */
 			}
 		}
+
+		
+
 	}
 
 	s_RecvedByte += len;                                                       /* 接收字节数累加 */
