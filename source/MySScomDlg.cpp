@@ -667,7 +667,7 @@ bool CMySScomDlg::SaveEditContent(void)
 	ComNumber = m_Combo_CommPort.GetCurSel();
 	m_Combo_CommPort.GetLBText(ComNumber, CommStr);
 
-	FileName = "All_Rec_" + CommStr + NowTime.Format("_%y-%m-%d_%H-%M-%S") + ".txt";
+	FileName = "星历All_Rec_" + CommStr + NowTime.Format("_%y-%m-%d_%H-%M-%S") + ".txt";
     
     GetDlgItemText(IDC_EDIT_RECVCSTR, m_Edit_RecvCstr);
 	
@@ -2281,7 +2281,7 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 			// 如果需要换行显示，并且启用了时间戳
 			if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {        /* 如果需要换行显示 */
 				TimeStr = GetHighExactTime();                                    /* 获取时间戳 */
-				ShowStr += "\n" + TimeStr + " ";                                 /* 添加时间戳（字符形式） */
+				ShowStr += TimeStr + " ";                                 /* 添加时间戳（字符形式） */
 				s_NeedChgLne = FALSE;
 			}
 		}
