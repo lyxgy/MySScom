@@ -92,6 +92,7 @@ typedef enum {
 	WM_USERMSG_EFDLGCLOSE,                                                     // 附加功能窗口关闭
 	WM_USERMSG_SSDLGCLOSE,                                                     // 高级发送窗口关闭
 	WM_USERMSG_KWDLGCLOSE,                                                     // 关键字符监听关闭
+	WM_USERMSG_DECODE,                                                     // 解密帧数据
 	WM_USERMSG_NOTDEFINED
 } WM_USERMSG_INDEX;
 

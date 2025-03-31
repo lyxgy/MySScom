@@ -161,6 +161,7 @@
 #define IDC_EDIT3                       1401
 #define IDC_EDIT4                       1402
 #define IDC_BUTTON1                     1403
+#define IDC_RICHEDIT22                  1407
 #define IDS_MAINSTATIC                  5000
 #define IDR_MAINFRAME                   7700
 #define IDC_EDIT_STR1                   7801
@@ -374,7 +375,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        160
 #define _APS_NEXT_COMMAND_VALUE         32809
-#define _APS_NEXT_CONTROL_VALUE         1404
+#define _APS_NEXT_CONTROL_VALUE         1408
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

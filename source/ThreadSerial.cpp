@@ -102,16 +102,56 @@ static DWORD WriteComm(unsigned char *buf, DWORD dwLength)
 **  函数名称:  ReadHandleUartData
 **  功能描述:  处理所接收到的数据
 **************************************************************************************************/
-static void ReadHandleUartData(void)
-{
+static void ReadHandleUartData() {
 	unsigned char buf[MAX_RECV_BYTE];
-	DWORD length = 0;
-
-	length = ReadComm(buf, MAX_RECV_BYTE);
+	DWORD length = ReadComm(buf, MAX_RECV_BYTE);
+	static bool m_inFrame = false;
+	static CByteArray m_buffer;
 
 	if (length > 0) {
 		::SendMessage(AfxGetMainWnd()->m_hWnd, WM_USERMSG_DATARECVED, length, (LPARAM)(&buf));
 	}
+
+	for (int i = 0; i < length; i++) {
+		if (!m_inFrame) {
+			// 检测帧头 0xEE 0xCC
+			if (buf[i] == 0xEE && (i + 1 < length && buf[i + 1] == 0xCC)) {
+				m_inFrame = true;
+				m_buffer.RemoveAll();
+				m_buffer.Add(0xEE);
+				m_buffer.Add(0xCC);
+				i++;  // 跳过 0xCC
+			}
+		}
+		else {
+			m_buffer.Add(buf[i]);
+
+			// 检查完整帧
+			if (CheckCompleteFrame(m_buffer)) {
+				// 发送完整帧（深拷贝数据）
+				ComMsgData* pMsg = new ComMsgData{
+					MSG_FRAME_DATA,
+					//new CByteArray(m_buffer)  // 动态分配副本
+				};
+				::SendMessage(AfxGetMainWnd()->m_hWnd, WM_USERMSG_DECODE, (WPARAM)pMsg, 0);
+				m_inFrame = false;
+			}
+		}
+	}
+}
+bool CheckCompleteFrame(const CByteArray& frame)
+{
+	// 最小帧长度：AA 55 + 长度 + 1字节数据 + 校验
+	if (frame.GetSize() < 4)
+		return false;
+
+	// 第3字节是数据长度（不包括AA 55和校验）
+	int dataLength = frame[2];
+
+	// 完整帧长度 = AA 55(2) + 长度(1) + 数据(N) + 校验(1)
+	int totalExpectedLength = 2 + 1 + dataLength + 1;
+
+	return (frame.GetSize() >= totalExpectedLength);
 }
 
 /**************************************************************************************************

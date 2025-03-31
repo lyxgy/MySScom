@@ -16,6 +16,19 @@ typedef struct {
 	unsigned char    checkbit;                                                 /* 校验位 */
 } SRL_DEV_PARA_T;
 
+// 消息类型枚举
+enum ComMsgType {
+    MSG_RAW_DATA,     // 原始数据
+    MSG_FRAME_DATA,   // 完整帧数据
+    MSG_ERROR         // 错误
+};
+
+// 消息数据结构体
+struct ComMsgData {
+    ComMsgType type;    // 消息类型
+    CByteArray* pData;  // 数据指针（动态分配，主线程负责释放）
+};
+
 /*************************************************************************************************/
 /*                                     串口设备参数定义                                          */
 /*************************************************************************************************/
@@ -35,4 +48,5 @@ bool SerialDevisOpened(void);
 int  SendSerialData(unsigned char *sbuf, int slen);
 
 bool CreateDeviceThread(void);
+bool CheckCompleteFrame(const CByteArray& frame);
 

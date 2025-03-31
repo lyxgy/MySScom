@@ -255,6 +255,7 @@ protected:
 	afx_msg LRESULT OnUsrMsgHdlEFDlgClose(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnUsrMsgHdlSSDlgClose(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnUsrMsgHdlKWDlgClose(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnComMsg(WPARAM wParam, LPARAM lParam);
 
 	DECLARE_EVENTSINK_MAP()
 	DECLARE_MESSAGE_MAP()
@@ -262,10 +263,15 @@ protected:
 private:
 
 	// ½âÂëº¯Êý
-	void DecodeData(const CString& data);
 
 public:
 	afx_msg void OnEnChangeEditRecvcstr();
+
+	afx_msg void OnCbnSelchangeComboCommport();
+	afx_msg void OnCbnSelchangeComboBaudrate();
+	afx_msg void OnCbnSelchangeComboDatabits();
+	afx_msg void OnCbnSelchangeComboCheckbit();
+	afx_msg void OnCbnSelchangeComboStopbits();
 };
 
 

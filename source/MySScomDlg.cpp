@@ -22,6 +22,7 @@ static const int    Combo_Check[5] = {0,    1,    2,    3,   4};
 //1.消息映射机制
 //2.系统消息处理
 //	1.窗口初始化
+//  2.定时器消息处理
 //3.自定义处理函数
 //	1.②保存数据
 //4.③界面准备工作
@@ -65,7 +66,10 @@ void CMySScomDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_CHECK_CRLFSEND, m_Check_CRLFSend);
 	DDX_Check(pDX, IDC_CHECK_AUTOSEND, m_Check_AutoSend);
 
+	//编辑框
 	DDX_Text(pDX, IDC_EDIT_RECVCSTR, m_Edit_RecvCstr);
+	DDX_Control(pDX, IDC_EDIT_RECVCSTR, m_RichEdit_Recv);
+
 	DDX_Text(pDX, IDC_EDIT_SENDCSTR, m_Edit_SendCstr);
 
 	DDX_Text(pDX, IDC_EDIT_SENDTIME, m_Edit_SendTime);
@@ -76,7 +80,6 @@ void CMySScomDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Text(pDX, IDC_EDIT_FILEPATH, m_Edit_FilePath);
 
-	DDX_Control(pDX, IDC_EDIT_RECVCSTR, m_RichEdit_Recv);
 
 }
 
@@ -131,6 +134,8 @@ BEGIN_MESSAGE_MAP(CMySScomDlg, CDialog)
 	
 	ON_MESSAGE(WM_USERMSG_NOTIFYICON, OnUsrMsgHdlIconNotify)
 	ON_MESSAGE(WM_USERMSG_COMDEVLIST, OnUsrMsgHdlComDevList)
+	ON_MESSAGE(WM_USERMSG_DECODE, OnComMsg) //解密
+
 	ON_MESSAGE(WM_USERMSG_COMDEVWAIT, OnUsrMsgHdlComDevWait)
 	ON_MESSAGE(WM_USERMSG_DATARECVED, OnUsrMsgHdlDataRecved)
 	ON_MESSAGE(WM_USERMSG_DATATOSEND, OnUsrMsgHdlDatatoSend)
@@ -145,6 +150,12 @@ BEGIN_MESSAGE_MAP(CMySScomDlg, CDialog)
 	ON_EN_CHANGE(IDC_EDIT_SENDCSTR, &CMySScomDlg::OnChangeEditSendcstr)
 	
 	ON_EN_CHANGE(IDC_EDIT_RECVCSTR, &CMySScomDlg::OnEnChangeEditRecvcstr)
+	
+	ON_CBN_SELCHANGE(IDC_COMBO_COMMPORT, &CMySScomDlg::OnCbnSelchangeComboCommport)
+	ON_CBN_SELCHANGE(IDC_COMBO_BAUDRATE, &CMySScomDlg::OnCbnSelchangeComboBaudrate)
+	ON_CBN_SELCHANGE(IDC_COMBO_DATABITS, &CMySScomDlg::OnCbnSelchangeComboDatabits)
+	ON_CBN_SELCHANGE(IDC_COMBO_CHECKBIT, &CMySScomDlg::OnCbnSelchangeComboCheckbit)
+	ON_CBN_SELCHANGE(IDC_COMBO_STOPBITS, &CMySScomDlg::OnCbnSelchangeComboStopbits)
 END_MESSAGE_MAP()
 
 BEGIN_EVENTSINK_MAP(CMySScomDlg, CDialog)
@@ -1738,9 +1749,6 @@ void CMySScomDlg::OnButtonSaveFile()
 	}
 }
 
-//发送窗口输入数据
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
 /**************************************************************************************************
 **  函数名称:  OnButtonSendData
 **  功能描述:  发送窗口内输入的数据
@@ -1808,7 +1816,6 @@ void CMySScomDlg::OnButtonSuperSend()
 	}
 }
 
-//其它基础功能
 /**************************************************************************************************
 **  函数名称:  OnButtonExtrafunc
 **  功能描述:  显示附加功能窗口
@@ -2234,6 +2241,7 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 
 		if (m_Check_HexDispl == TRUE) {                                        /* 当前处于16进制显示模式 */
 
+			
 			/* 考虑到00字符的特殊性，需要对其进行转义才能存储。转义规则如下：00转义成FF 01，FF转义成FF 02，其他字符不转义 */
 
 			if (sbuf[i] == 0) {                                                /* 00 转义成 FF 01 */
@@ -2253,37 +2261,42 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 				SetTimer(Timer_No_FrameDspl, CHNGLINE_INTERVAL, NULL);         /* 这里重新启动定时器判断是否没有再收到其他数据 */
 			}
 
-			if (sbuf[i] == '\n') {                                             /* 本次接收到回车符 */
-				s_NeedChgLne = TRUE;                                           /* 标记需要换行显示 */
+			if ((TempStr[i] == 0xEE) && (TempStr[i+1] == 0xEE) ){                                             /* 本次接收到回车符 */
+				                                         
 			}
 
-			// 添加数据部分
-			ShowStr += TempStr;
+			if (TempStr == '\n') {                                             /* 本次接收到回车符 */
+				s_NeedChgLne = TRUE;                                           /* 标记需要换行显示 */
+			}
+			
+			
 
 			// 如果需要换行显示，并且启用了时间戳
 			if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {        /* 如果需要换行显示 */
 				TimeStr = GetHighExactTime();                                    /* 获取时间戳 */
-				ShowStr += "\n" + TimeStr + " ";                                 /* 添加时间戳（字符形式） */
+				ShowStr += TimeStr;                                 /* 添加时间戳（字符形式） */
 				s_NeedChgLne = FALSE;
 			}
+			// 添加数据部分
+			ShowStr += TempStr;
 		}
 		else {                                                               /* 当前处于字符显示模式 */
 
 			TempStr.Format("%c", sbuf[i]);                                     /* 处理接收到的数据 */
 
-			if (sbuf[i] == '\n') {                                             /* 本次接收到回车符 */
+			if (TempStr == '\n') {                                             /* 本次接收到回车符 */
 				s_NeedChgLne = TRUE;                                           /* 标记需要换行显示 */
 			}
-
-			// 添加数据部分
-			ShowStr += TempStr;
-
 			// 如果需要换行显示，并且启用了时间戳
 			if ((s_NeedChgLne == TRUE) && (m_Check_ShowTime == TRUE)) {        /* 如果需要换行显示 */
 				TimeStr = GetHighExactTime();                                    /* 获取时间戳 */
-				ShowStr += TimeStr + " ";                                 /* 添加时间戳（字符形式） */
+				ShowStr += TimeStr;                                 /* 添加时间戳（字符形式） */
 				s_NeedChgLne = FALSE;
 			}
+			// 添加数据部分
+			ShowStr += TempStr;
+
+			
 		}
 	}
 
@@ -2398,85 +2411,47 @@ void CMySScomDlg::OnChangeEditSendcstr()
 **  函数名称:  DecodeData
 **  功能描述:  解码接收到的原始数据
 **************************************************************************************************/
-void CMySScomDlg::DecodeData(const CString& data)
-{
-	// 分离二进制数据和文本数据
-	CString binaryData;
-	CString textData;
+LRESULT CMySScomDlg::OnComMsg(WPARAM wParam, LPARAM lParam) {
+	ComMsgData* pMsg = (ComMsgData*)wParam;
 
-	for (int i = 0; i < data.GetLength(); i++) {
-		TCHAR ch = data.GetAt(i);
-		if (ch >= 32 && ch <= 126) { // 可打印字符（ASCII 32-126）
-			textData += ch;
+	switch (pMsg->type) {
+	case MSG_RAW_DATA:
+		TRACE("收到原始数据，长度：%d\n", pMsg->pData->GetSize());
+		break;
+
+	case MSG_FRAME_DATA: {
+		TRACE("收到完整帧，长度：%d\n", pMsg->pData->GetSize());
+		// 示例：打印帧内容（调试用）
+		CString str;
+		for (int i = 0; i < pMsg->pData->GetSize(); i++) {
+			str.AppendFormat(_T("%02X "), pMsg->pData->GetAt(i));
 		}
-		else { // 非可打印字符（二进制数据）
-			binaryData += ch;
+		CString strLog;
+		strLog.Format(_T("[%s] 帧数据："), CTime::GetCurrentTime().Format("%Y-%m-%d %H:%M:%S"));
+		for (int i = 0; i < pMsg->pData->GetSize(); i++) {
+			strLog.AppendFormat(_T("%02X "), pMsg->pData->GetAt(i));
 		}
+
+		// 写入文件
+		CStdioFile file;
+		if (file.Open(_T("CommLog.txt"), CFile::modeCreate | CFile::modeNoTruncate | CFile::modeWrite)) {
+			file.SeekToEnd();
+			file.WriteString(strLog + _T("\n"));
+			file.Close();
+		}
+		break;
 	}
 
-	// 解析文本数据（NMEA 格式）
-	if (!textData.IsEmpty()) {
-		std::vector<CString> nmeaLines;
-		int start = 0;
-		int end = textData.Find('\n');
-
-		while (end != -1) {
-			CString line = textData.Mid(start, end - start);
-			nmeaLines.push_back(line);
-			start = end + 1;
-			end = textData.Find('\n', start);
-		}
-
-		for (const CString& line : nmeaLines) {
-			if (line.Left(6) == "$GNRMC") {
-				// 解析 $GNRMC 数据
-				std::vector<CString> parts;
-				int pos = 0;
-				CString token = line.Tokenize(",", pos);
-
-				while (!token.IsEmpty()) {
-					parts.push_back(token);
-					token = line.Tokenize(",", pos);
-				}
-
-				if (parts.size() >= 13) {
-					CString time = parts[1];         // 时间
-					CString status = parts[2];       // 状态
-					CString latitude = parts[3];     // 纬度
-					CString latitudeDir = parts[4];  // 纬度方向
-					CString longitude = parts[5];    // 经度
-					CString longitudeDir = parts[6]; // 经度方向
-					CString speed = parts[7];        // 速度
-					CString course = parts[8];       // 航向
-					CString date = parts[9];         // 日期
-
-					// 输出解析结果
-					CString message;
-					message.Format("Time: %s, Latitude: %s %s, Longitude: %s %s, Speed: %s, Course: %s",
-						time, latitude, latitudeDir, longitude, longitudeDir, speed, course);
-					AfxMessageBox(message);
-				}
-			}
-		}
+	case MSG_ERROR:
+		AfxMessageBox(_T("串口数据接收错误！"));
+		break;
 	}
 
-	// 解析二进制数据
-	if (!binaryData.IsEmpty()) {
-		// 假设二进制数据的前 4 字节是时间戳，接下来的 8 字节是经纬度
-		if (binaryData.GetLength() >= 12) {
-			BYTE* pData = (BYTE*)binaryData.GetBuffer();
-			DWORD timestamp = *(DWORD*)pData; // 时间戳
-			double latitude = *(double*)(pData + 4); // 纬度
-			double longitude = *(double*)(pData + 12); // 经度
-
-			// 输出解析结果
-			CString message;
-			message.Format("Binary Data - Timestamp: %u, Latitude: %f, Longitude: %f", timestamp, latitude, longitude);
-			AfxMessageBox(message);
-		}
-	}
+	// 释放内存
+	if (pMsg->pData) delete pMsg->pData;
+	delete pMsg;
+	return 0;
 }
-
 
 /**************************************************************************************************
 **  函数名称:  OnMenuEditCopy
@@ -2709,4 +2684,30 @@ void CMySScomDlg::OnEnChangeEditRecvcstr()
 	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
 
 	// TODO:  在此添加控件通知处理程序代码
+}
+
+
+void CMySScomDlg::OnCbnSelchangeComboCommport()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+void CMySScomDlg::OnCbnSelchangeComboBaudrate()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+void CMySScomDlg::OnCbnSelchangeComboDatabits()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+void CMySScomDlg::OnCbnSelchangeComboCheckbit()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+void CMySScomDlg::OnCbnSelchangeComboStopbits()
+{
+	// TODO: 在此添加控件通知处理程序代码
 }
