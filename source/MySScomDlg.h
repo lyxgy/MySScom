@@ -183,6 +183,8 @@ public:
 	BOOL TaskBarAddIcon(HWND hwnd, UINT uID, HICON hicon, LPSTR lpszTip);
 	BOOL TaskBarDeleteIcon(HWND hwnd, UINT uID);
 
+	//BOOL SaveDecodedData(const CString& content);
+
 
 protected:
 	CToolTipCtrl m_tooltip;
@@ -255,16 +257,13 @@ protected:
 	afx_msg LRESULT OnUsrMsgHdlEFDlgClose(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnUsrMsgHdlSSDlgClose(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnUsrMsgHdlKWDlgClose(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT OnComMsg(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnComMsg(unsigned char* data, DWORD length);
 
 	DECLARE_EVENTSINK_MAP()
 	DECLARE_MESSAGE_MAP()
 
-private:
-
-	// ½âÂëº¯Êý
-
 public:
+
 	afx_msg void OnEnChangeEditRecvcstr();
 
 	afx_msg void OnCbnSelchangeComboCommport();

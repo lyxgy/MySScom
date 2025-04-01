@@ -11,6 +11,7 @@ static volatile HANDLE       s_FileHandle = INVALID_HANDLE_VALUE;              /
 static OVERLAPPED            s_EventoRead;                                     /* 串口读取事件对象 */
 static OVERLAPPED            s_EventWrite;                                     /* 串口写入事件对象 */
 
+
 /**************************************************************************************************
 **  函数名称:  ListenProc
 **  功能描述:  串口设备监听函数
@@ -103,56 +104,95 @@ static DWORD WriteComm(unsigned char *buf, DWORD dwLength)
 **  功能描述:  处理所接收到的数据
 **************************************************************************************************/
 static void ReadHandleUartData() {
-	unsigned char buf[MAX_RECV_BYTE];
+	BYTE buf[MAX_RECV_BYTE];
 	DWORD length = ReadComm(buf, MAX_RECV_BYTE);
-	static bool m_inFrame = false;
-	static CByteArray m_buffer;
+	if (length == 0) return;
 
-	if (length > 0) {
-		::SendMessage(AfxGetMainWnd()->m_hWnd, WM_USERMSG_DATARECVED, length, (LPARAM)(&buf));
-	}
+	// 深拷贝数据到消息结构
+	auto* pMsg = new USART_MSG(length, buf);
+	memcpy(pMsg->data, buf, length);
 
-	for (int i = 0; i < length; i++) {
-		if (!m_inFrame) {
-			// 检测帧头 0xEE 0xCC
-			if (buf[i] == 0xEE && (i + 1 < length && buf[i + 1] == 0xCC)) {
-				m_inFrame = true;
-				m_buffer.RemoveAll();
-				m_buffer.Add(0xEE);
-				m_buffer.Add(0xCC);
-				i++;  // 跳过 0xCC
-			}
-		}
-		else {
-			m_buffer.Add(buf[i]);
-
-			// 检查完整帧
-			if (CheckCompleteFrame(m_buffer)) {
-				// 发送完整帧（深拷贝数据）
-				ComMsgData* pMsg = new ComMsgData{
-					MSG_FRAME_DATA,
-					//new CByteArray(m_buffer)  // 动态分配副本
-				};
-				::SendMessage(AfxGetMainWnd()->m_hWnd, WM_USERMSG_DECODE, (WPARAM)pMsg, 0);
-				m_inFrame = false;
-			}
-		}
-	}
+	// 发送消息（接收方需负责释放内存）
+	::PostMessage(
+		AfxGetMainWnd()->m_hWnd,
+		WM_USERMSG_DATARECVED,
+		(WPARAM)pMsg,
+		0
+	);
 }
+
 bool CheckCompleteFrame(const CByteArray& frame)
 {
-	// 最小帧长度：AA 55 + 长度 + 1字节数据 + 校验
-	if (frame.GetSize() < 4)
+	const int FIXED_FRAME_SIZE = 62;
+	if (frame.GetSize() < FIXED_FRAME_SIZE)
 		return false;
 
-	// 第3字节是数据长度（不包括AA 55和校验）
-	int dataLength = frame[2];
+	// 检查帧头（可选）
+	if (frame[0] != 0xEE || frame[1] != 0xCC) {
+		TRACE("帧头错误！\n");
+		return false;
+	}
 
-	// 完整帧长度 = AA 55(2) + 长度(1) + 数据(N) + 校验(1)
-	int totalExpectedLength = 2 + 1 + dataLength + 1;
-
-	return (frame.GetSize() >= totalExpectedLength);
+	return true;
 }
+
+static void ProcessBufferData(const BYTE* data, size_t length) {
+	size_t processed = 0;  // 已处理的数据位置
+
+	while (processed < length) {
+		// 如果当前没有正在组装的帧，则搜索帧头
+		if (!g_frameState.hasPartialFrame) {
+			// 搜索帧头 0xEE 0xCC
+			for (; processed + 1 < length; processed++) {
+				if (data[processed] == 0xEE && data[processed + 1] == 0xCC) {
+					g_frameState.hasPartialFrame = true;
+					g_frameState.partialData.RemoveAll();
+					g_frameState.partialData.Add(0xEE);
+					g_frameState.partialData.Add(0xCC);
+					processed += 2;  // 跳过帧头
+					break;
+				}
+			}
+			if (!g_frameState.hasPartialFrame) break;  // 未找到帧头，退出
+		}
+
+		// 将剩余数据追加到部分帧中
+		size_t remainingNeeded = 62 - g_frameState.partialData.GetSize();
+		size_t copyLen = min(remainingNeeded, length - processed);
+
+		for (size_t i = 0; i < copyLen; i++) {
+			g_frameState.partialData.Add(data[processed + i]);
+		}
+		processed += copyLen;
+
+		// 检查是否收齐完整帧
+		if (g_frameState.partialData.GetSize() == 62) {
+			ProcessCompleteFrame(g_frameState.partialData.GetData());
+			g_frameState.hasPartialFrame = false;
+		}
+	}
+}
+
+void ProcessCompleteFrame(const BYTE* frame) {
+	// 1. 验证帧有效性
+	if (frame[0] != 0xEE || frame[1] != 0xCC) {
+		TRACE("无效帧头！\n");
+		return;
+	}
+
+	// 2. 创建消息结构
+	ComMsgData* pMsg = new ComMsgData();
+	pMsg->type = MSG_FRAME_DATA;
+	pMsg->pData = new CByteArray;
+
+	// 3. 拷贝帧数据（线程安全）
+	pMsg->pData->SetSize(62);
+	memcpy(pMsg->pData->GetData(), frame, 62);
+
+	// 4. 发送到主线程
+	::PostMessage(AfxGetMainWnd()->m_hWnd, WM_USERMSG_DECODE, (WPARAM)pMsg, 0);
+}
+
 
 /**************************************************************************************************
 **  函数名称:  SerailDataHdlProc

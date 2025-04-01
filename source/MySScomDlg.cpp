@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "MySScom.h"
 #include "MySScomDlg.h"
+#include "ThreadSerial.h" 
 #include <vector>
 
 #ifdef _DEBUG
@@ -134,7 +135,6 @@ BEGIN_MESSAGE_MAP(CMySScomDlg, CDialog)
 	
 	ON_MESSAGE(WM_USERMSG_NOTIFYICON, OnUsrMsgHdlIconNotify)
 	ON_MESSAGE(WM_USERMSG_COMDEVLIST, OnUsrMsgHdlComDevList)
-	ON_MESSAGE(WM_USERMSG_DECODE, OnComMsg) //解密
 
 	ON_MESSAGE(WM_USERMSG_COMDEVWAIT, OnUsrMsgHdlComDevWait)
 	ON_MESSAGE(WM_USERMSG_DATARECVED, OnUsrMsgHdlDataRecved)
@@ -2261,10 +2261,6 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 				SetTimer(Timer_No_FrameDspl, CHNGLINE_INTERVAL, NULL);         /* 这里重新启动定时器判断是否没有再收到其他数据 */
 			}
 
-			if ((TempStr[i] == 0xEE) && (TempStr[i+1] == 0xEE) ){                                             /* 本次接收到回车符 */
-				                                         
-			}
-
 			if (TempStr == '\n') {                                             /* 本次接收到回车符 */
 				s_NeedChgLne = TRUE;                                           /* 标记需要换行显示 */
 			}
@@ -2311,11 +2307,22 @@ void CMySScomDlg::HandleUSARTData(unsigned char* sbuf, DWORD len)
 **************************************************************************************************/
 LRESULT CMySScomDlg::OnUsrMsgHdlDataRecved(WPARAM wParam, LPARAM lParam)
 {
-	unsigned char buff[MAX_SEND_BYTE];
+	//原来的方式，直接复制数据到数组中
+	//unsigned char buff[MAX_SEND_BYTE];
 
-	memcpy(buff, (unsigned char*)lParam, wParam);
+	//memcpy(buff, (unsigned char*)lParam, wParam);
 
-	HandleUSARTData(buff, wParam);
+	//HandleUSARTData(buff, wParam);
+
+	//新的方式，环形缓存区传递数据
+	// 从环形缓冲区提取数据块
+	auto* pMsg = reinterpret_cast<USART_MSG*>(wParam);
+
+	// 处理数据
+	HandleUSARTData(pMsg->data, pMsg->length);
+	OnComMsg(pMsg->data, pMsg->length);
+
+	delete pMsg; // 释放内存
 
 	return true;
 }
@@ -2411,47 +2418,58 @@ void CMySScomDlg::OnChangeEditSendcstr()
 **  函数名称:  DecodeData
 **  功能描述:  解码接收到的原始数据
 **************************************************************************************************/
-LRESULT CMySScomDlg::OnComMsg(WPARAM wParam, LPARAM lParam) {
-	ComMsgData* pMsg = (ComMsgData*)wParam;
+LRESULT CMySScomDlg::OnComMsg(unsigned char* data, DWORD length) {
+	CString strDecodedData;  // 存储解码后的文本
 
-	switch (pMsg->type) {
-	case MSG_RAW_DATA:
-		TRACE("收到原始数据，长度：%d\n", pMsg->pData->GetSize());
-		break;
+	// 原有解码逻辑
+	size_t pos = 0;
+	while (pos + 62 <= length) {
+		if (data[pos] == 0xEE && data[pos + 1] == 0xCC) {
+			uint8_t payload_len = data[pos + 2];
+			// ...校验等逻辑...
 
-	case MSG_FRAME_DATA: {
-		TRACE("收到完整帧，长度：%d\n", pMsg->pData->GetSize());
-		// 示例：打印帧内容（调试用）
-		CString str;
-		for (int i = 0; i < pMsg->pData->GetSize(); i++) {
-			str.AppendFormat(_T("%02X "), pMsg->pData->GetAt(i));
+			// 将解码数据转为CString（16进制格式）
+			CString strHex;
+			for (size_t i = 0; i < payload_len; i++) {
+				strHex.AppendFormat(_T("%02X "), data[pos + 3 + i]);
+			}
+			strDecodedData += strHex + _T("\r\n");  // 每帧数据换行
 		}
-		CString strLog;
-		strLog.Format(_T("[%s] 帧数据："), CTime::GetCurrentTime().Format("%Y-%m-%d %H:%M:%S"));
-		for (int i = 0; i < pMsg->pData->GetSize(); i++) {
-			strLog.AppendFormat(_T("%02X "), pMsg->pData->GetAt(i));
-		}
-
-		// 写入文件
-		CStdioFile file;
-		if (file.Open(_T("CommLog.txt"), CFile::modeCreate | CFile::modeNoTruncate | CFile::modeWrite)) {
-			file.SeekToEnd();
-			file.WriteString(strLog + _T("\n"));
-			file.Close();
-		}
-		break;
+		pos++;
 	}
 
-	case MSG_ERROR:
-		AfxMessageBox(_T("串口数据接收错误！"));
-		break;
-	}
+	//// 保存到文件（每次收到新数据追加到文件）
+	//if (!strDecodedData.IsEmpty()) {
+	//	static CString strAllData;  // 持久化存储所有数据
+	//	strAllData += strDecodedData;
+	//	SaveDecodedData(strAllData);
+	//}
 
-	// 释放内存
-	if (pMsg->pData) delete pMsg->pData;
-	delete pMsg;
 	return 0;
 }
+
+
+
+//BOOL SaveDecodedData(const CString& content) {
+//	CFile file;
+//	CString fileName;
+//	CTime now = CTime::GetCurrentTime();
+//
+//	// 生成带时间戳的文件名（如：星历All_Rec_COM1_23-08-20_14-30-45.txt）
+//	fileName.Format(_T("星历All_Rec_COM%d_%s.txt"),
+//		now.Format(_T("%y-%m-%d_%H-%M-%S")));
+//
+//	// 创建目录（如果不存在）
+//	CreateDirectory(_T("RecvData"), NULL);  // 创建RecvData文件夹
+//
+//	// 保存文件
+//	if (file.Open(_T("RecvData\\") + fileName, CFile::modeCreate | CFile::modeWrite)) {
+//		file.Write(content, content.GetLength() * sizeof(TCHAR));  // 支持Unicode
+//		file.Close();
+//		return true;
+//	}
+//	return false;
+//}
 
 /**************************************************************************************************
 **  函数名称:  OnMenuEditCopy
