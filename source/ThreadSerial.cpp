@@ -107,7 +107,11 @@ static void ReadHandleUartData(void)
 	unsigned char buf[MAX_RECV_BYTE];
 	DWORD length = 0;
 
+	DWORD startTime = GetTickCount64();
 	length = ReadComm(buf, MAX_RECV_BYTE);
+	DWORD endTime = GetTickCount64();
+
+	TRACE("ReadComm execution time: %d ms\n", endTime - startTime);
 
 	if (length > 0) {
 		::SendMessage(AfxGetMainWnd()->m_hWnd, WM_USERMSG_DATARECVED, length, (LPARAM)(&buf));

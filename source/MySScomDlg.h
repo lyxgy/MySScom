@@ -141,7 +141,7 @@ public:
 
 	CStatic            *s_MainStatic;                                          /* 放置于主窗口的静态控件 */
 
-	BOOL EnumCommPortList(void);
+	BOOL  EnumCommPortList(void);
 
 	void SetControlStatus(bool Enable);
 	void SetSendCtrlArea(bool Enable);
@@ -182,7 +182,6 @@ public:
 
 	BOOL TaskBarAddIcon(HWND hwnd, UINT uID, HICON hicon, LPSTR lpszTip);
 	BOOL TaskBarDeleteIcon(HWND hwnd, UINT uID);
-
 
 protected:
 	CToolTipCtrl m_tooltip;
@@ -258,14 +257,6 @@ protected:
 
 	DECLARE_EVENTSINK_MAP()
 	DECLARE_MESSAGE_MAP()
-
-private:
-
-	// 解码函数
-	void DecodeData(const CString& data);
-
-public:
-	afx_msg void OnEnChangeEditRecvcstr();
 };
 
 

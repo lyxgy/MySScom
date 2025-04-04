@@ -269,6 +269,3 @@ void CDialogAutoReply::OnClose()
 }
 
 
-
-
-

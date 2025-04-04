@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "MySScomTool.h"
-#include <regex> // C++11 正则表达式库
-#include <string>
-#include <atlstr.h>
+
 /**************************************************************************************************
 **  函数名称:  GetChkSum_O
 **  功能描述:  计算数据的原码的单字节累加校验和
@@ -332,67 +330,6 @@ char ConvertHexChar(char ch)
 		return (-1);
 	}
 }
-
-/**************************************************************************************************
-**  函数名称:  ConvertTimestampToString
-**  功能描述:  时间戳转换为字符串
-**************************************************************************************************/
-
-
-//CString ConvertTimestampToString(const CString& ShowStr, BOOL isHexMode)
-//{
-//	CString ResultStr;
-//	int pos = 0; // 当前处理位置
-//
-//	// 时间戳的正则表达式（假设时间戳格式为 [YYYY-MM-DD HH:MM:SS]）
-//	std::wstring timestampPattern = L"\\[\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\]";
-//
-//	// 编译正则表达式
-//	// 使用 CT2W 宏将 CString 转换为 std::wstring
-//	std::wstring inputStr = CT2W(ShowStr.GetString());
-//
-//	// 编译正则表达式
-//	std::wregex regex(timestampPattern);
-//
-//	// 用于存储匹配结果
-//	std::wsmatch matches;
-//	std::wstring::const_iterator searchStart(inputStr.cbegin());
-//
-//	while (std::regex_search(searchStart, inputStr.cend(), matches, regex)) {
-//		// 提取时间戳
-//		std::wstring timestamp = matches.str(0);
-//
-//		// 将时间戳添加到结果字符串中
-//		ResultStr += CString(timestamp.c_str());
-//
-//		// 处理时间戳前面的数据
-//		std::wstring prefix(searchStart, matches[0].first);
-//		if (isHexMode) {
-//			// 如果是十六进制模式，将数据部分转换为十六进制
-//			CString data(prefix.c_str());
-//			ResultStr += TransformtoHex(data);
-//		}
-//		else {
-//			// 如果是字符模式，直接添加数据部分
-//			ResultStr += CString(prefix.c_str());
-//		}
-//
-//		// 更新搜索起始位置
-//		searchStart = matches[0].second;
-//	}
-//
-//	// 处理剩余部分（如果没有时间戳）
-//	std::wstring remainingData(searchStart, inputStr.cend());
-//	if (isHexMode) {
-//		CString data(remainingData.c_str());
-//		ResultStr += TransformtoHex(data);
-//	}
-//	else {
-//		ResultStr += CString(remainingData.c_str());
-//	}
-//
-//	return ResultStr;
-//}
 
 /**************************************************************************************************
 **  函数名称:  TransformtoHex

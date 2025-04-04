@@ -24,7 +24,6 @@ bool          ParseCStrisLegal(CString str);
 
 char    ConvertHexChar(char ch);
 int     String2Hex(CString str, CByteArray &senddata);
-//CString ConvertTimestampToString(const CString& ShowStr, BOOL isHexMode);
 CString TransformtoHex(CString InputStr);
 bool    CharisValid(unsigned char inchar);
 char    GetKeyValue(unsigned int keyvalue);

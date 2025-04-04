@@ -156,11 +156,6 @@
 #define IDC_BUTTON_SAVEFILE             1394
 #define IDC_BUTTON2                     1395
 #define IDC_BUTTON_CLOSEWIN             1395
-#define IDC_EDIT1                       1399
-#define IDC_EDIT2                       1400
-#define IDC_EDIT3                       1401
-#define IDC_EDIT4                       1402
-#define IDC_BUTTON1                     1403
 #define IDS_MAINSTATIC                  5000
 #define IDR_MAINFRAME                   7700
 #define IDC_EDIT_STR1                   7801
@@ -372,9 +367,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        160
+#define _APS_NEXT_RESOURCE_VALUE        159
 #define _APS_NEXT_COMMAND_VALUE         32809
-#define _APS_NEXT_CONTROL_VALUE         1404
+#define _APS_NEXT_CONTROL_VALUE         1396
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
