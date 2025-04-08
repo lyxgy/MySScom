@@ -59,3 +59,4 @@ Release/*
 .vs/*
 Settings.ini
 Thumbs.db"*.aps" 
+"*.aps" 
