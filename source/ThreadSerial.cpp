@@ -70,7 +70,15 @@ static DWORD ReadComm(unsigned char *buf, DWORD dwLength)
 
 	ClearCommError(s_FileHandle, &dwErrorFlags, &ComStat);                     /* 首先清除错误标志 */
 
+	LARGE_INTEGER start, end, freq;
+	QueryPerformanceFrequency(&freq); // 获取计时器频率
+	QueryPerformanceCounter(&start);  // 开始计时
+
 	ReadFile(s_FileHandle, buf, dwLength, &length, &s_EventoRead);             /* 读取串口数据 */
+
+	QueryPerformanceCounter(&end); // 结束计时
+	double elapsed = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+	TRACE("ReadComm time: %.3f ms\n", elapsed);
 
 	return length;
 }
@@ -107,11 +115,7 @@ static void ReadHandleUartData(void)
 	unsigned char buf[MAX_RECV_BYTE];
 	DWORD length = 0;
 
-	DWORD startTime = GetTickCount64();
 	length = ReadComm(buf, MAX_RECV_BYTE);
-	DWORD endTime = GetTickCount64();
-
-	TRACE("ReadComm execution time: %d ms\n", endTime - startTime);
 
 	if (length > 0) {
 		::SendMessage(AfxGetMainWnd()->m_hWnd, WM_USERMSG_DATARECVED, length, (LPARAM)(&buf));

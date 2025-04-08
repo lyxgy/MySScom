@@ -1,12 +1,15 @@
 #include "stdafx.h"
 #include "MySScom.h"
 #include "MySScomDlg.h"
+#include <cstdint>
+#include <string>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
 
 #pragma comment(lib, "version")
 
@@ -659,26 +662,307 @@ CString CMySScomDlg::GetHighExactTime(void)
 **************************************************************************************************/
 bool CMySScomDlg::SaveEditContent(void)
 {
-    CFile   MyFile;                                                            /* 定义文件类 */
-	CString CommStr, FileName;
-	int     ComNumber;
-    CTime   NowTime  = CTime::GetCurrentTime();                                /* 获取现在时间 */
+	CFile rawFile, decodedFile;  // 分别用于原始数据和解码数据
+	CString commStr, rawFileName, decodedFileName;
+	CTime nowTime = CTime::GetCurrentTime();
 
-	ComNumber = m_Combo_CommPort.GetCurSel();
-	m_Combo_CommPort.GetLBText(ComNumber, CommStr);
+	// 1. 获取当前串口号
+	int comNumber = m_Combo_CommPort.GetCurSel();
+	m_Combo_CommPort.GetLBText(comNumber, commStr);
 
-	FileName = "All_Rec_" + CommStr + NowTime.Format("_%y-%m-%d_%H-%M-%S") + ".txt";
-    
-    GetDlgItemText(IDC_EDIT_RECVCSTR, m_Edit_RecvCstr);
-	
-	if (MyFile.Open(REC_DIR_PATH + FileName, CFile::modeCreate | CFile::modeReadWrite)) {
-        MyFile.Write(m_Edit_RecvCstr, m_Edit_RecvCstr.GetLength());            /* 写入文本文件 */
-        MyFile.Close();                                                        /* 关闭文件 */
-		return TRUE;
-    } else {
+	// 2. 生成文件名（原始数据和解码数据）
+	CString timeStr = nowTime.Format("_%y-%m-%d_%H-%M-%S");
+	rawFileName = "All_Rec_" + commStr + timeStr + ".txt";
+	decodedFileName = "Decoded_" + commStr + timeStr + ".txt";  
+
+	// 3. 获取编辑框内容（原始数据）
+	GetDlgItemText(IDC_EDIT_RECVCSTR, m_Edit_RecvCstr);
+
+	// 4. 保存原始数据
+	if (!rawFile.Open(REC_DIR_PATH + rawFileName, CFile::modeCreate | CFile::modeWrite)) {
+		AfxMessageBox(_T("原始文件保存失败！"));
 		return FALSE;
 	}
+	rawFile.Write(m_Edit_RecvCstr, m_Edit_RecvCstr.GetLength());
+	rawFile.Close();
+	//DecodeEditContent();
+	//// 5. 解码并保存处理后的数据
+	//if (DecodeAndSaveFile(REC_DIR_PATH + rawFileName, REC_DIR_PATH + decodedFileName)) {
+	//	AfxMessageBox(_T("解码文件保存成功！"));
+	//}
+	//else {
+	//	AfxMessageBox(_T("解码失败！"));
+	//	return FALSE;
+	//}
+	CString decodedData;
+	if (DecodeAndSaveToVariable(m_Edit_RecvCstr, decodedData)) {
+		// 保存解码后的CSV数据
+		CStdioFile file;
+		if (file.Open(REC_DIR_PATH + decodedFileName, CFile::modeCreate | CFile::modeWrite)) {
+			// 写入CSV文件头
+			// 表头（严格对齐数据列的宽度）
+			file.WriteString(_T("            时间                     \t纬度		\t经度	       椭球高	海平面高	北向速度	 东向速度	  地速	水平速度	方位角  方位精度	仰角	  仰角精度	\n"));
+			file.WriteString(decodedData);
+			file.Close();
+		}
+		else {
+			AfxMessageBox(_T("解码文件保存失败！"));
+			return FALSE;
+		}
+	}
+	else {
+		AfxMessageBox(_T("解码失败！"));
+		return FALSE;
+	}
+	return TRUE;
 }
+
+// 解析协议函数
+bool CMySScomDlg::DecodeAndSaveToVariable(const CString& rawData, CString& outDecodedData)
+{
+	// 1. 查找帧头 "EE CC" 的位置
+	int headerPos = rawData.Find(_T("EE CC"));
+	if (headerPos == -1) {
+		TRACE(_T("错误：未找到帧头 EE CC\n"));
+		return false;
+	}
+
+	// 2. 提取协议部分（从EE CC开始）
+	CString hexProtocol = rawData.Mid(headerPos);
+	hexProtocol.Remove(' '); // 移除所有空格
+	
+	// 3. 检查最小长度（至少能读取数据长度字段）
+	if (hexProtocol.GetLength() < 8) { // 需要至少4字节（8字符）
+		TRACE(_T("错误：数据太短，无法读取长度字段\n"));
+		return false;
+	}
+
+
+// 定义临时变量存储解析后的字节值
+	unsigned int year_high, year_low, month, day, hour, minute, second, millis_high, millis_low;
+	int longitude, latitude, height, hMSL, velN, velE, velD, gSpeed, relPosHeading, relPosEvl;
+	uint32_t accHeading, accEvl;
+	uint8_t checksum,checktemp;
+	// 按协议字段偏移量解析字节（每2字符为1字节）
+	sscanf_s(hexProtocol.Mid(4 * 2, 2), "%2x", &year_low);    // 索引4（第5字节）：低位
+	sscanf_s(hexProtocol.Mid(5 * 2, 2), "%2x", &year_high);   // 索引5（第6字节）：高位
+	sscanf_s(hexProtocol.Mid(6 * 2, 2), "%2x", &month);       // 索引6（第7字节）
+	sscanf_s(hexProtocol.Mid(7 * 2, 2), "%2x", &day);         // 索引7（第8字节）
+	sscanf_s(hexProtocol.Mid(8 * 2, 2), "%2x", &hour);        // 索引8（第9字节）
+	sscanf_s(hexProtocol.Mid(9 * 2, 2), "%2x", &minute);      // 索引9（第10字节）
+	sscanf_s(hexProtocol.Mid(10 * 2, 2), "%2x", &second);     // 索引10（第11字节）
+	sscanf_s(hexProtocol.Mid(11 * 2, 2), "%2x", &millis_low); // 索引11（第12字节）：低位
+	sscanf_s(hexProtocol.Mid(12 * 2, 2), "%2x", &millis_high);// 索引12（第13字节）：高位
+
+	// 小端序合并
+	uint16_t year = (year_high << 8) | year_low;
+	uint16_t millis = (millis_high << 8) | millis_low;
+
+	// 定义4字节小端序解析函数
+	auto parseU32LittleEndian = [&](int bytePos) -> uint32_t {
+		uint32_t b0, b1, b2, b3;
+
+		// 安全解析每个字节（每2字符为1字节）
+		sscanf_s(hexProtocol.Mid(bytePos * 2, 2), "%2x", &b0);
+		sscanf_s(hexProtocol.Mid((bytePos + 1) * 2, 2), "%2x", &b1);
+		sscanf_s(hexProtocol.Mid((bytePos + 2) * 2, 2), "%2x", &b2);
+		sscanf_s(hexProtocol.Mid((bytePos + 3) * 2, 2), "%2x", &b3);
+
+		// 小端序组合
+		return (b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
+		};
+
+	// 修正后的字段解析
+	longitude     = parseU32LittleEndian(13);  // 字节13-16 (小端序)
+	latitude      = parseU32LittleEndian(17);  // 字节17-20
+	height        = parseU32LittleEndian(21);  // 字节21-24
+	hMSL          = parseU32LittleEndian(25);  // 字节25-28
+	velN          = parseU32LittleEndian(29);  // 字节29-32
+	velE          = parseU32LittleEndian(33);  // 字节33-36
+	velD          = parseU32LittleEndian(37);  // 字节37-40
+	gSpeed        = parseU32LittleEndian(41);  // 字节41-44
+	relPosHeading = parseU32LittleEndian(45);  // 字节45-48
+	accHeading    = parseU32LittleEndian(49);  // 字节49-52
+	relPosEvl     = parseU32LittleEndian(53);  // 字节53-56
+	accEvl        = parseU32LittleEndian(57);  // 字节57-60
+
+	// 校验和（最后1字节）
+	sscanf_s(hexProtocol.Mid(61 * 2, 2) ,"%hhx", &checksum);
+
+	// 4. 检查校验和
+	height = parseU32LittleEndian(21);  // 字节21-24
+	checktemp = 0xFF & (year + year_low + month + day + hour + minute + second + millis + longitude + latitude + height+
+		hMSL+ velN + velE + velD + gSpeed + relPosHeading + accHeading + relPosEvl + accEvl);
+	if (checksum == checktemp) {
+		TRACE(_T("校验和正确\n"));
+	}
+	else
+	{
+		TRACE(_T("校验和错误\n"));
+		//return false;
+	}
+	// 数据格式化（添加固定宽度）
+	outDecodedData.Format(
+		_T("%04u-%02u-%02u %02u:%02u:%02u.%03u ")  // 时间（固定19字符）
+		_T("%11.6f\t%11.6f\t")                      // 纬度,经度（保留6位小数）
+		_T("%6.2f\t%6.2f\t")                        // 椭球高,海平面高（2位小数）
+		_T("%6.2f\t%6.2f\t%6.2f\t%6.2f\t")          // 速度（北/东/地/水平）
+		_T("%5.2f\t%5.2f\t%5.2f\t%5.2f"),           // 角度（方位/仰角及精度）
+
+		// 时间字段
+		year, month, day, hour, minute, second, millis,
+
+		// 位置和高程（转换为浮点）
+		latitude / 1000000.0, longitude / 1000000.0,  // 假设原始数据为1e-7度
+		height / 1000.0, hMSL / 1000.0,          // 高程单位转换为米
+
+		// 速度（转换为m/s）
+		velN / 1000.0, velE / 1000.0, velD / 1000.0, gSpeed / 1000.0,
+
+		// 角度
+		relPosHeading / 100000.0,  // 方位角（假设单位0.001度）
+		accHeading / 100000.0,     // 方位精度
+		relPosEvl / 100000.0,      // 仰角
+		accEvl / 100000.0          // 仰角精度
+	);
+
+	return true;
+}
+
+// 解码并保存函数
+//bool CMySScomDlg::DecodeAndSaveFile(const CString& inputFilePath, const CString& outputFilePath) {
+//	CStdioFile inputFile, outputFile;
+//	CString strLine;
+//
+//	// 1. 打开输入文件（文本模式）
+//	if (!inputFile.Open(inputFilePath, CFile::modeRead | CFile::typeText)) {
+//		AfxMessageBox(_T("无法打开输入文件！"));
+//		return false;
+//	}
+//
+//	// 2. 创建输出文件（文本模式）
+//	if (!outputFile.Open(outputFilePath, CFile::modeCreate | CFile::modeWrite | CFile::typeText)) {
+//		AfxMessageBox(_T("无法创建输出文件！"));
+//		inputFile.Close();
+//		return false;
+//	}
+//
+//	// 3. 写入CSV表头
+//	outputFile.WriteString(_T("时间,纬度(度),经度(度),海拔高(m),北向速度(m/s),东向速度(m/s),地速(m/s),水平速度(m/s),方位角(度),俯仰角(度)\n"));
+//
+//	// 4. 逐行解析协议
+//	while (inputFile.ReadString(strLine)) {
+//		strLine.Trim();
+//		if (strLine.IsEmpty()) continue;
+//
+//		// 转换为ASCII处理
+//		CStringA lineA(strLine);
+//		const BYTE* pData = (const BYTE*)lineA.GetString();
+//		DWORD dwSize = lineA.GetLength();
+//
+//		// 解析协议
+//		GNSS_Protocol protocol = { 0 };
+//		if (ParseProtocol(pData, dwSize, protocol)) {
+//			
+//
+//			// 格式化输出
+//			CString strOutput;
+//			strOutput.Format(
+//				_T("%04u-%02u-%02u %02u:%02u:%02u.%03u,%.6f,%.6f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n"),
+//				protocol.year, protocol.month, protocol.day,
+//				protocol.hour, protocol.minute, protocol.second, protocol.millis
+//				
+//			);
+//
+//			outputFile.WriteString(strOutput);
+//		}
+//	}
+//
+//	inputFile.Close();
+//	outputFile.Close();
+//	return true;
+//}
+
+//bool CMySScomDlg::ParseProtocol(const BYTE* pData, DWORD dwSize, GNSS_Protocol& result) {
+//	// 1. 清零结构体
+//	memset(&result, 0, sizeof(GNSS_Protocol));
+//
+//	// 2. 检查最小长度（62字节协议体 + 时间戳）
+//	const DWORD MIN_PROTOCOL_SIZE = 62 + 15; // 时间戳约15字节
+//	if (dwSize < MIN_PROTOCOL_SIZE) {
+//		TRACE(_T("错误：数据长度不足（需要%d字节，实际%d字节）\n"), MIN_PROTOCOL_SIZE, dwSize);
+//		return false;
+//	}
+//
+//	// 3. 跳过时间戳 "[HH:MM:SS:ms] "
+//	CStringA dataStr((const char*)pData, dwSize);
+//	int protocolStart = dataStr.Find("] ") + 2;
+//	if (protocolStart < 2) {
+//		TRACE(_T("错误：无效的时间戳格式！\n"));
+//		return false;
+//	}
+//
+//	// 4. 提取纯协议数据（十六进制部分）
+//	CStringA hexData = dataStr.Mid(protocolStart);
+//	hexData.Remove(' ');
+//	//if (hexData.GetLength() != 124) { // 62字节=124字符
+//	//	TRACE(_T("错误：协议数据需要124字符，实际%d字符\n"), hexData.GetLength());
+//	//	return false;
+//	//}
+//
+//	auto MidField = [](const CStringA& hexStr, int offset, int length) -> uint32_t {
+//		CStringA part = hexStr.Mid(offset * 2, length * 2);
+//		return (uint32_t)strtoul(part, NULL, 16);
+//		};
+//
+//	// 5.1 解析头部和基础字段
+//	result.header[0] = (BYTE)MidField(hexData, 0, 1);
+//	result.header[1] = (BYTE)MidField(hexData, 1, 1);
+//	result.dataLen = (uint16_t)MidField(hexData, 2, 2);
+//
+//	result.year = (uint16_t)MidField(hexData, 4, 2);
+//	result.month = (BYTE)MidField(hexData, 6, 1);
+//	result.day = (BYTE)MidField(hexData, 7, 1);
+//	result.hour = (BYTE)MidField(hexData, 8, 1);
+//	result.minute = (BYTE)MidField(hexData, 9, 1);
+//	result.second = (BYTE)MidField(hexData, 10, 1);
+//	result.millis = (uint16_t)MidField(hexData, 11, 2);
+//
+//	// 5.2 解析4字节整型数据
+//	result.accuracy = (int)MidField(hexData, 13, 4);
+//	result.latitude = (int)MidField(hexData, 17, 4);
+//	result.height_ellipsoid = (int)MidField(hexData, 21, 4);
+//	result.height_sea = (int)MidField(hexData, 25, 4);
+//	result.velocity_north = (int)MidField(hexData, 29, 4);
+//	result.velocity_east = (int)MidField(hexData, 33, 4);
+//	result.velocity_ground = (int)MidField(hexData, 37, 4);
+//	result.speed_horizontal = (int)MidField(hexData, 41, 4);
+//	result.azimuth = (int)MidField(hexData, 45, 4);
+//	result.azimuth_accuracy = (uint32_t)MidField(hexData, 49, 4);
+//	result.elevation = (int)MidField(hexData, 53, 4);
+//	result.elevation_accuracy = (uint32_t)MidField(hexData, 57, 4);
+//	result.checksum = (BYTE)MidField(hexData, 61, 1);
+//
+//	// 6. 验证帧头
+//	if (result.header[0] != 0xEE || result.header[1] != 0xCC) {
+//		TRACE(_T("错误：无效帧头（应为EE CC，实际%02X %02X）\n"),
+//			result.header[0], result.header[1]);
+//		return false;
+//	}
+//
+//	// 7. 校验和验证（从第3字节到倒数第2字节）
+//	uint8_t checksum = 0;
+//	for (int i = 4; i < sizeof(GNSS_Protocol) - 1; i++) {
+//		checksum += ((const BYTE*)&result)[i];
+//	}
+//	if (checksum != result.checksum) {
+//		TRACE(_T("校验和错误！接收:%02X 计算:%02X\n"),
+//			result.checksum, checksum);
+//		return false;
+//	}
+//
+//	return true;
+//}
 
 /**************************************************************************************************
 **  函数名称:  ExcuteAutoReply
