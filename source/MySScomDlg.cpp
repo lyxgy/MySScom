@@ -22,7 +22,7 @@ static const int    Combo_Check[5] = {0,    1,    2,    3,   4};
 CMySScomDlg::CMySScomDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CMySScomDlg::IDD, pParent)
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON3);
 
 	AfxInitRichEdit();                                                         /* 初始化RichEdit控件 */
 }
@@ -2650,7 +2650,7 @@ BOOL CMySScomDlg::OnInitDialog()
 
 	s_PDlgSuprSend->InitateSrDlgPos();                                         /* 这句话一定要放在最后面 */
 	
-    TaskBarAddIcon(GetSafeHwnd(), IDR_MAINFRAME, AfxGetApp()->LoadIcon(IDR_MAINFRAME), "MySScom");
+    TaskBarAddIcon(GetSafeHwnd(), IDR_MAINFRAME, AfxGetApp()->LoadIcon(IDI_ICON3), "MySScom");
 
 	CRect rect;                                                                /* 初始化主窗体位置，并限制高度和宽度 */
 	GetWindowRect(&rect);
