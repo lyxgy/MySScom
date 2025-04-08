@@ -58,4 +58,4 @@ Release/*
 
 .vs/*
 Settings.ini
-Thumbs.db
+Thumbs.db"*.aps" 
