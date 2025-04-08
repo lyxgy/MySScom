@@ -64,6 +64,8 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+IDI_ICON3               ICON                    "res\\79f5228f97614c35bfb3c38698ae1789.ico"
+
 IDR_MAINFRAME           ICON                    "res\\MySScom.ico"
 
 

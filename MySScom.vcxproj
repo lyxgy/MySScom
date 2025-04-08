@@ -187,6 +187,9 @@
     <ClInclude Include="source\ThreadSerial.h" />
     <ClInclude Include="source\UpdateManage.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\79f5228f97614c35bfb3c38698ae1789.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
