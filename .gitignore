@@ -60,3 +60,7 @@ Release/*
 Settings.ini
 Thumbs.db"*.aps" 
 "*.aps" 
+
+# 忽略所有 .log 文件
+*.log
+*.aps
