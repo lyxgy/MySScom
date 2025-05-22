@@ -26,7 +26,7 @@ static int CompareVerData(CString ver1, CString ver2)
 	pos_dot2 = ver1.Find(".", pos_dot1 + 1);
 
 	if ((pos_dot1 == -1) || (pos_dot2 == -1)) {
-		tempstr.Format("版本1(%s)格式不符合要求", ver1);
+		tempstr.Format(_T("版本1(%s)格式不符合要求"), ver1.GetString());
 		MessageBox(NULL, ver1, "提示", MB_SYSTEMMODAL | MB_OK | MB_ICONEXCLAMATION);
 		return -2;
 	}
@@ -41,7 +41,7 @@ static int CompareVerData(CString ver1, CString ver2)
 	pos_dot2 = ver2.Find(".", pos_dot1 + 1);
 
 	if ((pos_dot1 == -1) || (pos_dot2 == -1)) {
-		tempstr.Format("版本2(%s)格式不符合要求", ver2);
+		tempstr.Format(_T("版本2(%s)格式不符合要求"), ver2.GetString());
 		MessageBox(NULL, ver1, "提示", MB_SYSTEMMODAL | MB_OK | MB_ICONEXCLAMATION);
 		return -2;
 	}
@@ -141,7 +141,7 @@ static UINT UpdateManageProc(LPVOID pParam)
 	CString tempstr, filestr;
 
 	#if RELEASE_VERSION == 1                                                   /* 先延时一段，以免影响用户其他操作 */
-	Sleep(30 * 1000);
+	Sleep(30 * 1000);//原来30s
 	#else
 	Sleep(3 * 1000);
 	#endif
@@ -161,30 +161,33 @@ static UINT UpdateManageProc(LPVOID pParam)
 				while (pfile->ReadString(tempstr) != NULL) {                   /* 反复读取文件内容，保存至本地 */
 					filestr += tempstr;
 				}
-				
+				CString test = GetProgramVersion();
 				if (ParseUpdateFile(filestr) == true) {                        /* 对文件内容进行解析，获取有效信息 */
+					if (CompareVerData(s_newver_info, GetProgramVersion()) == 0) {
+						success = true;
+					}
 					if (CompareVerData(s_newver_info, GetProgramVersion()) == 1) {
 						success = true;
+						tempstr.Format(_T("检测到新版本[V%s]已经发布，是否自动跳转至下载地址？\r\n"), s_newver_info.GetString());
+						if (MessageBox(NULL, tempstr, "友情提示", MB_SYSTEMMODAL | MB_YESNO | MB_ICONQUESTION) == IDYES) {
+							ShellExecute(NULL, _T("open"), s_update_link, NULL, NULL, SW_SHOW);
+						}
 					}
 				}
 			}
 		}
 
+		if (pfile) {
+			pfile->Close();
+			delete pfile;//下次不需再使用这次的地址，而是覆盖地址赋值，pfile无需置为NULL
+		}
 		Session.Close();
-		pfile->Close();
-		delete pfile;
-		pfile = NULL;
-
+		
 		if (success == true) {                                                 /* 解析成功，则退出。否则循环处理 */
 			break;
 		}
 
-		Sleep(30 * 60 * 1000);                                                 /* 间隔30分钟检测一次 */
-	}
-
-	tempstr.Format("检测到新版本[V%s]已经发布，是否自动跳转至下载地址？\r\n下载地址如果无法打开，请尝试反复刷新几次\r\n可能会被系统或杀毒软件误报为病毒，请放心使用", s_newver_info);
-	if (MessageBox(NULL, tempstr, "友情提示", MB_SYSTEMMODAL | MB_YESNO | MB_ICONQUESTION) == IDYES) {
-		ShellExecute(NULL, _T("open"), s_update_link, NULL, NULL, SW_SHOW);
+		Sleep(30*60*1000);                                                 /* 间隔30分钟检测一次 */
 	}
 
 	s_UpdateHdle->SuspendThread();

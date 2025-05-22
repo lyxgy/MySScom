@@ -64,9 +64,9 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON3               ICON                    "res\\79f5228f97614c35bfb3c38698ae1789.ico"
-
 IDR_MAINFRAME           ICON                    "res\\MySScom.ico"
+
+IDI_ICON3               ICON                    "res\\79f5228f97614c35bfb3c38698ae1789.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ BEGIN
     CONTROL         "数据清空前自动保存",IDC_CHECK_AUTOSAVE,"Button",BS_AUTOCHECKBOX | BS_LEFT | BS_VCENTER | WS_TABSTOP,13,206,83,9
     PUSHBUTTON      "高级发送",IDC_BUTTON_SRSEND,58,251,40,19
     CONTROL         "以16进制发送（HEX）",IDC_CHECK_HEXSSEND,"Button",BS_AUTOCHECKBOX | BS_LEFT | BS_VCENTER | WS_TABSTOP,13,274,88,9
-    EDITTEXT        IDC_EDIT_SENDTIME,59,299,27,12,ES_CENTER | ES_NUMBER
+    EDITTEXT        IDC_EDIT_SENDTIME,55,299,38,12,ES_CENTER | ES_NUMBER
     CONTROL         "发送时补加回车换行",IDC_CHECK_CRLFSEND,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,287,88,9
     EDITTEXT        IDC_EDIT_SENDCSTR,117,261,390,12,ES_AUTOHSCROLL | ES_WANTRETURN
     PUSHBUTTON      "发送数据",IDC_BUTTON_SEND,512,259,42,15
@@ -106,7 +106,7 @@ BEGIN
     LTEXT           "波特率：",IDC_STATIC,13,33,32,8
     LTEXT           "数据位：",IDC_STATIC,13,47,32,8
     LTEXT           "停止位：",IDC_STATIC,13,75,32,8
-    LTEXT           "ms",IDC_STATIC_MS,90,300,9,8
+    LTEXT           "ms",IDC_STATIC_MS,95,301,9,8
     CONTROL         "",IDC_STATIC_DEVIDE,"Static",SS_ETCHEDHORZ,6,246,100,1
     LTEXT           "超过",IDC_STATIC_OVER,26,193,16,8
     LTEXT           "KB",IDC_STATIC_LINES,81,193,18,8
@@ -583,6 +583,17 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "程序介绍说明",                      IDC_MENU_EDIT_ABOUT
     END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_MYSSCOM_DIALOG AFX_DIALOG_LAYOUT
+BEGIN
+    0
 END
 
 

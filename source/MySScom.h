@@ -18,12 +18,11 @@
 #define SHAKE_DISTANCE                 10                                      /* 抖动窗体的偏移位置 */
 #define REC_DIR_PATH                   "Record\\"                              /* 存放记录文件的统一目录 */
 
-#define UPDCTRL_FILE_PATH              "https://gitee.com/leon1741/MySScom/raw/main/update/update.ini"
-
+#define UPDCTRL_FILE_PATH			   "https://raw.githubusercontent.com/leon1741/MySScom/main/update/update.ini"
 #define UPDCTRL_HEAD_FLAG              "<NewVerInfo>"
 #define UPDCTRL_TAIL_FLAG              "<UpdateLink>"
 
-#define README_FILE_PATH               "https://gitee.com/leon1741/MySScom/blob/main/README.md"
+#define README_FILE_PATH               "https://github.com/leon1741/MySScom/blob/main/README.md"
 
 /*************************************************************************************************/
 /*                                     版本控制开关                                              */
