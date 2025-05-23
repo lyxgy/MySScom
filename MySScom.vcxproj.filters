@@ -20,9 +20,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="res\MySScom.ico">
-      <Filter>Resource Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="res\MySScom.rc2">
       <Filter>Resource Files</Filter>
     </CustomBuild>

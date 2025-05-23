@@ -64,8 +64,6 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDR_MAINFRAME           ICON                    "res\\MySScom.ico"
-
 IDI_ICON3               ICON                    "res\\79f5228f97614c35bfb3c38698ae1789.ico"
 
 
@@ -435,8 +433,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,0,0,0
- PRODUCTVERSION 6,5,0,0
+ FILEVERSION 0,1,0,0
+ PRODUCTVERSION 0,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -452,15 +450,11 @@ BEGIN
         BLOCK "080404b0"
         BEGIN
             VALUE "Comments", "一个自创的串口通信应用程序和调试助手"
-            VALUE "CompanyName", "雅迅网络&研发中心"
             VALUE "FileDescription", "串口通信应用"
-            VALUE "FileVersion", "内部发行版"
-            VALUE "InternalName", "MySScom"
-            VALUE "LegalCopyright", "版权所有 (@) 姚亮"
-            VALUE "LegalTrademarks", "姚亮"
+            VALUE "InternalName", "MySScom魔改版"
             VALUE "OriginalFilename", "MySScom.EXE"
             VALUE "ProductName", "MySScom 应用程序"
-            VALUE "ProductVersion", "6.5.0.0"
+            VALUE "ProductVersion", "0.1.0.0"
         END
     END
     BLOCK "VarFileInfo"

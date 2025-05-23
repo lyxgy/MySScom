@@ -2522,7 +2522,7 @@ void CMySScomDlg::OnMenuTrayExit()
 
 	CloseSerialDevice();                                                       /* 关闭串口设备 */
     
-    TaskBarDeleteIcon(GetSafeHwnd(), IDR_MAINFRAME);                           /* 删除任务栏的图标 */
+    TaskBarDeleteIcon(GetSafeHwnd(), IDI_ICON3);                           /* 删除任务栏的图标 */
     
     ::PostQuitMessage(0);                                                      /* 程序退出的唯一方式 */
 }
@@ -2650,7 +2650,7 @@ BOOL CMySScomDlg::OnInitDialog()
 
 	s_PDlgSuprSend->InitateSrDlgPos();                                         /* 这句话一定要放在最后面 */
 	
-    TaskBarAddIcon(GetSafeHwnd(), IDR_MAINFRAME, AfxGetApp()->LoadIcon(IDI_ICON3), "MySScom");
+    TaskBarAddIcon(GetSafeHwnd(), IDI_ICON3, AfxGetApp()->LoadIcon(IDI_ICON3), "MySScom");
 
 	CRect rect;                                                                /* 初始化主窗体位置，并限制高度和宽度 */
 	GetWindowRect(&rect);

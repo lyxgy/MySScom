@@ -28,7 +28,7 @@
 /*                                     版本控制开关                                              */
 /*************************************************************************************************/
 #define  VERSION_COMON                 0x01                                    /* 公共版本 */
-#define  VERSION_YAXON                 0x02                                    /* 雅迅版本 */
+#define  VERSION_YAXON                 0x02                                    /* 开发版本 */
 
 #define  VERSION_CTRL                  VERSION_YAXON
 

@@ -157,11 +157,7 @@
 #define IDC_BUTTON2                     1395
 #define IDC_BUTTON_CLOSEWIN             1395
 #define IDS_MAINSTATIC                  5000
-
-//原来的
-#define IDR_MAINFRAME                   7700
-#define IDI_ICON3						7800
-
+#define IDI_ICON3                       7800
 #define IDC_EDIT_STR1                   7801
 #define IDC_EDIT_STR2                   7802
 #define IDC_EDIT_STR3                   7803
@@ -371,7 +367,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        159
+#define _APS_NEXT_RESOURCE_VALUE        160
 #define _APS_NEXT_COMMAND_VALUE         32809
 #define _APS_NEXT_CONTROL_VALUE         1396
 #define _APS_NEXT_SYMED_VALUE           101

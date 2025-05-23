@@ -151,7 +151,6 @@
     <ResourceCompile Include="MySScom.rc" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="res\MySScom.ico" />
     <CustomBuild Include="res\MySScom.rc2">
       <FileType>RC</FileType>
     </CustomBuild>
