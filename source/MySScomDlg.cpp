@@ -829,141 +829,6 @@ bool CMySScomDlg::DecodeAndSaveToVariable(const CString& rawData, CString& outDe
 	return true;
 }
 
-// 解码并保存函数
-//bool CMySScomDlg::DecodeAndSaveFile(const CString& inputFilePath, const CString& outputFilePath) {
-//	CStdioFile inputFile, outputFile;
-//	CString strLine;
-//
-//	// 1. 打开输入文件（文本模式）
-//	if (!inputFile.Open(inputFilePath, CFile::modeRead | CFile::typeText)) {
-//		AfxMessageBox(_T("无法打开输入文件！"));
-//		return false;
-//	}
-//
-//	// 2. 创建输出文件（文本模式）
-//	if (!outputFile.Open(outputFilePath, CFile::modeCreate | CFile::modeWrite | CFile::typeText)) {
-//		AfxMessageBox(_T("无法创建输出文件！"));
-//		inputFile.Close();
-//		return false;
-//	}
-//
-//	// 3. 写入CSV表头
-//	outputFile.WriteString(_T("时间,纬度(度),经度(度),海拔高(m),北向速度(m/s),东向速度(m/s),地速(m/s),水平速度(m/s),方位角(度),俯仰角(度)\n"));
-//
-//	// 4. 逐行解析协议
-//	while (inputFile.ReadString(strLine)) {
-//		strLine.Trim();
-//		if (strLine.IsEmpty()) continue;
-//
-//		// 转换为ASCII处理
-//		CStringA lineA(strLine);
-//		const BYTE* pData = (const BYTE*)lineA.GetString();
-//		DWORD dwSize = lineA.GetLength();
-//
-//		// 解析协议
-//		GNSS_Protocol protocol = { 0 };
-//		if (ParseProtocol(pData, dwSize, protocol)) {
-//			
-//
-//			// 格式化输出
-//			CString strOutput;
-//			strOutput.Format(
-//				_T("%04u-%02u-%02u %02u:%02u:%02u.%03u,%.6f,%.6f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n"),
-//				protocol.year, protocol.month, protocol.day,
-//				protocol.hour, protocol.minute, protocol.second, protocol.millis
-//				
-//			);
-//
-//			outputFile.WriteString(strOutput);
-//		}
-//	}
-//
-//	inputFile.Close();
-//	outputFile.Close();
-//	return true;
-//}
-
-//bool CMySScomDlg::ParseProtocol(const BYTE* pData, DWORD dwSize, GNSS_Protocol& result) {
-//	// 1. 清零结构体
-//	memset(&result, 0, sizeof(GNSS_Protocol));
-//
-//	// 2. 检查最小长度（62字节协议体 + 时间戳）
-//	const DWORD MIN_PROTOCOL_SIZE = 62 + 15; // 时间戳约15字节
-//	if (dwSize < MIN_PROTOCOL_SIZE) {
-//		TRACE(_T("错误：数据长度不足（需要%d字节，实际%d字节）\n"), MIN_PROTOCOL_SIZE, dwSize);
-//		return false;
-//	}
-//
-//	// 3. 跳过时间戳 "[HH:MM:SS:ms] "
-//	CStringA dataStr((const char*)pData, dwSize);
-//	int protocolStart = dataStr.Find("] ") + 2;
-//	if (protocolStart < 2) {
-//		TRACE(_T("错误：无效的时间戳格式！\n"));
-//		return false;
-//	}
-//
-//	// 4. 提取纯协议数据（十六进制部分）
-//	CStringA hexData = dataStr.Mid(protocolStart);
-//	hexData.Remove(' ');
-//	//if (hexData.GetLength() != 124) { // 62字节=124字符
-//	//	TRACE(_T("错误：协议数据需要124字符，实际%d字符\n"), hexData.GetLength());
-//	//	return false;
-//	//}
-//
-//	auto MidField = [](const CStringA& hexStr, int offset, int length) -> uint32_t {
-//		CStringA part = hexStr.Mid(offset * 2, length * 2);
-//		return (uint32_t)strtoul(part, NULL, 16);
-//		};
-//
-//	// 5.1 解析头部和基础字段
-//	result.header[0] = (BYTE)MidField(hexData, 0, 1);
-//	result.header[1] = (BYTE)MidField(hexData, 1, 1);
-//	result.dataLen = (uint16_t)MidField(hexData, 2, 2);
-//
-//	result.year = (uint16_t)MidField(hexData, 4, 2);
-//	result.month = (BYTE)MidField(hexData, 6, 1);
-//	result.day = (BYTE)MidField(hexData, 7, 1);
-//	result.hour = (BYTE)MidField(hexData, 8, 1);
-//	result.minute = (BYTE)MidField(hexData, 9, 1);
-//	result.second = (BYTE)MidField(hexData, 10, 1);
-//	result.millis = (uint16_t)MidField(hexData, 11, 2);
-//
-//	// 5.2 解析4字节整型数据
-//	result.accuracy = (int)MidField(hexData, 13, 4);
-//	result.latitude = (int)MidField(hexData, 17, 4);
-//	result.height_ellipsoid = (int)MidField(hexData, 21, 4);
-//	result.height_sea = (int)MidField(hexData, 25, 4);
-//	result.velocity_north = (int)MidField(hexData, 29, 4);
-//	result.velocity_east = (int)MidField(hexData, 33, 4);
-//	result.velocity_ground = (int)MidField(hexData, 37, 4);
-//	result.speed_horizontal = (int)MidField(hexData, 41, 4);
-//	result.azimuth = (int)MidField(hexData, 45, 4);
-//	result.azimuth_accuracy = (uint32_t)MidField(hexData, 49, 4);
-//	result.elevation = (int)MidField(hexData, 53, 4);
-//	result.elevation_accuracy = (uint32_t)MidField(hexData, 57, 4);
-//	result.checksum = (BYTE)MidField(hexData, 61, 1);
-//
-//	// 6. 验证帧头
-//	if (result.header[0] != 0xEE || result.header[1] != 0xCC) {
-//		TRACE(_T("错误：无效帧头（应为EE CC，实际%02X %02X）\n"),
-//			result.header[0], result.header[1]);
-//		return false;
-//	}
-//
-//	// 7. 校验和验证（从第3字节到倒数第2字节）
-//	uint8_t checksum = 0;
-//	for (int i = 4; i < sizeof(GNSS_Protocol) - 1; i++) {
-//		checksum += ((const BYTE*)&result)[i];
-//	}
-//	if (checksum != result.checksum) {
-//		TRACE(_T("校验和错误！接收:%02X 计算:%02X\n"),
-//			result.checksum, checksum);
-//		return false;
-//	}
-//
-//	return true;
-//}
-
 /**************************************************************************************************
 **  函数名称:  ExcuteAutoReply
 **  功能描述:  处理协议数据的自动回复
@@ -1158,14 +1023,8 @@ void CMySScomDlg::UpdateStatusBarNow(void)
     this->GetWindowRect(&DialogMain);                                          /* 获取主界面在屏幕上的位置 */
 
 #if VERSION_CTRL == VERSION_YAXON
-	if (DialogMain.Width() > 1200) {
-		DisplayStr = " 欢迎使用MySScom ※ 雅迅人自己的串口调试工具 ※ 设计者：姚亮 ※ 欢迎提出修改意见和建议";
-	} else if (DialogMain.Width() > 1100) {
-		DisplayStr = " 欢迎使用MySScom ※ 雅迅人自己的串口调试工具 ※ 设计者：姚亮";
-	} else if (DialogMain.Width() > 1000) {
-		DisplayStr = " 欢迎使用MySScom ※ 雅迅人自己的串口调试工具";
-	} else if (DialogMain.Width() > 800) {
-		DisplayStr = " 欢迎使用MySScom";
+	if (DialogMain.Width() > 800) {
+		DisplayStr = " 欢迎使用MySScom ※ 这是MySSCom的魔改版本 ※ ";
 	} else if (DialogMain.Width() > 700) {
 		DisplayStr = " 欢迎使用";
 	} else {
@@ -1495,13 +1354,13 @@ void CMySScomDlg::InitiateStatusBar(void)
     s_CStatusBar.SetPaneInfo(1, nID, SBPS_NORMAL, 90);
     s_CStatusBar.SetPaneText(1, " 串口未打开");
     
-    s_CStatusBar.SetPaneInfo(2, nID, SBPS_NORMAL, 140);
+    s_CStatusBar.SetPaneInfo(2, nID, SBPS_NORMAL, 180);
     s_CStatusBar.SetPaneText(2, " 接收: 000, 000, 000");
     
-    s_CStatusBar.SetPaneInfo(3, nID, SBPS_NORMAL, 140);
+    s_CStatusBar.SetPaneInfo(3, nID, SBPS_NORMAL, 180);
     s_CStatusBar.SetPaneText(3, " 发送: 000, 000, 000");
 
-    s_CStatusBar.SetPaneInfo(4, nID, SBPS_NORMAL, 200);
+    s_CStatusBar.SetPaneInfo(4, nID, SBPS_NORMAL, 230);
     s_CStatusBar.SetPaneText(4, m_strTime);
 
     RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, 0);
