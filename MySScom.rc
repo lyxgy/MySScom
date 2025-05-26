@@ -434,7 +434,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,1,0,0
+ FILEVERSION 0,2,1,0
  PRODUCTVERSION 0,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -452,6 +452,7 @@ BEGIN
         BEGIN
             VALUE "Comments", "一个自创的串口通信应用程序和调试助手"
             VALUE "FileDescription", "串口通信应用"
+            VALUE "FileVersion", "0.2.1.0"
             VALUE "InternalName", "MySScom魔改版"
             VALUE "OriginalFilename", "MySScom.EXE"
             VALUE "ProductName", "MySScom 应用程序"
