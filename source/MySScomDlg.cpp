@@ -126,6 +126,10 @@ BEGIN_MESSAGE_MAP(CMySScomDlg, CDialog)
 	ON_WM_SYSCOMMAND()
 	ON_WM_CONTEXTMENU()
 	ON_EN_CHANGE(IDC_EDIT_SENDCSTR, &CMySScomDlg::OnChangeEditSendcstr)
+	ON_STN_CLICKED(IDC_STATIC_MS, &CMySScomDlg::OnStnClickedStaticMs)
+	ON_BN_CLICKED(IDC_BUTTON1, &CMySScomDlg::SendPacketData)
+	ON_NOTIFY(NM_CUSTOMDRAW, IDC_PROGRESS_SENDFILE, &CMySScomDlg::OnNMCustomdrawProgressSendfile)
+	ON_BN_CLICKED(IDC_BUTTON2, &CMySScomDlg::OnButtonSendUnPackFile)
 END_MESSAGE_MAP()
 
 BEGIN_EVENTSINK_MAP(CMySScomDlg, CDialog)
@@ -1023,7 +1027,7 @@ void CMySScomDlg::UpdateStatusBarNow(void)
     this->GetWindowRect(&DialogMain);                                          /* 获取主界面在屏幕上的位置 */
 
 #if VERSION_CTRL == VERSION_YAXON
-	if (DialogMain.Width() > 800) {
+	if (DialogMain.Width() > 1150) {
 		DisplayStr = " 欢迎使用MySScom ※ 这是MySSCom的魔改版本 ※ ";
 	} else if (DialogMain.Width() > 700) {
 		DisplayStr = " 欢迎使用";
@@ -1065,6 +1069,13 @@ void CMySScomDlg::UpdateStatusBarNow(void)
 
 	UpdateMainStatic();                                                        /* 更新提示框的显示 */
 }
+
+/*测试Lara USR-LG207的缓存大小是否为240字节*/
+void CMySScomDlg::SendTestUSRLG207(void) {
+	unsigned char data[MAX_SEND_BYTE] = { 0 };	
+	SendDatatoComm(data, MAX_SEND_BYTE, FALSE);
+}
+/*测试结果：252个字节*/
 
 /**************************************************************************************************
 **  函数名称:  SendDatatoComm
@@ -1173,9 +1184,71 @@ bool CMySScomDlg::SendFileDatatoComm(void)
 		s_FileDatPos = 0;
 		KillTimer(Timer_No_SendFile);
 		SetSendCtrlArea(TRUE);                                                 /* 启用其他发送控件 */
+		MessageBox("文件发送完成！", "提示", MB_OK + MB_ICONINFORMATION);
 	}
 
 	return TRUE;
+}
+
+bool CMySScomDlg::SendFileDataPackstoComm()
+{
+		CFile filename;
+		const int FIXED_PACKET_SIZE = 240; // 固定每次发送240字节
+		unsigned long filetlen;
+		unsigned char filebuff[FIXED_PACKET_SIZE]; 
+
+		if (!filename.Open(m_Edit_FilePath, CFile::modeRead | CFile::typeBinary)) {
+			MessageBox("读取文件失败，请确认路径正确且文件未处于打开状态！", "提示", MB_OK + MB_ICONINFORMATION);
+			return FALSE;
+		}
+
+		filetlen = (unsigned long)filename.GetLength();
+
+		// 计算本次实际发送量（不超过240字节）
+		int sendbyte = min(FIXED_PACKET_SIZE, (int)(filetlen - s_FileDatPos));
+
+		filename.Seek(s_FileDatPos, CFile::begin);
+		filename.Read(filebuff, sendbyte);
+
+		// 发送数据
+		int actualSent = SendSerialData(filebuff, sendbyte);
+		if (actualSent <= 0) {
+			MessageBox("发送失败！", "错误", MB_OK + MB_ICONERROR);
+			filename.Close();
+			return FALSE;
+		}
+
+		// 更新状态
+		s_FileDatPos += actualSent;
+		s_SendedByte += actualSent;
+
+		// 计算剩余时间（基于波特率）
+		int baudrate = Combo_Baud[m_Combo_BaudRate.GetCurSel()];
+		double secondsPerByte = 10.0 / baudrate; // 每个字节的传输时间(ms)
+		int remainingTime = (int)((filetlen - s_FileDatPos) * secondsPerByte / 1000);
+
+		// 更新进度条（假设PROGRESS_POS=100）
+		m_Progs_SendFile.SetPos((int)(s_FileDatPos * 100.0 / filetlen));
+
+		// 更新状态文本
+		CString statusText;
+		statusText.Format(_T("进度: %d/%d字节 (%.1f%%) | 剩余时间: %d秒"),
+			s_FileDatPos, filetlen,
+			s_FileDatPos * 100.0 / filetlen,
+			remainingTime);
+		SetDlgItemText(IDC_STATIC_SEND, statusText);
+
+		filename.Close();
+
+		// 检查是否发送完成
+		if (s_FileDatPos >= filetlen) {
+			s_FileDatPos = 0;
+			KillTimer(Timer_No_SendUnPackFile);
+			SetSendCtrlArea(TRUE);
+			MessageBox("文件发送完成！", "提示", MB_OK + MB_ICONINFORMATION);
+		}
+
+		return TRUE;
 }
 
 /**************************************************************************************************
@@ -1823,6 +1896,142 @@ void CMySScomDlg::OnButtonSendData()
 		MessageBox("您输入的数据帧内容过长，或者存在非法字符，请确认！......       ", "提醒", MB_OK + MB_ICONEXCLAMATION);
 		return;
 	}
+
+	MessageBox("数据发送完成！", "提示", MB_OK + MB_ICONINFORMATION);
+
+}
+
+/**************************************************************************************************
+**  函数名称:  SendPacketData
+**  功能描述:  分包发送窗口内输入的数据
+**************************************************************************************************/
+//void CMySScomDlg::SendPacketData()
+//{
+//	const int PACKET_SIZE = 240; // 每包240字节
+//	unsigned char buff[MAX_SEND_BYTE];
+//
+//	GetDlgItemText(IDC_EDIT_SENDCSTR, m_Edit_SendCstr);
+//
+//	if (m_Edit_SendCstr.GetLength() <= 0) {
+//		MessageBox("发送窗口内容为空，未发送任何数据！ ", "提示", MB_OK + MB_ICONINFORMATION);
+//		return;
+//	}
+//
+//	// 将字符串数据复制到缓冲区
+//	strncpy_s((char*)&buff[0], sizeof(buff), (LPCTSTR)m_Edit_SendCstr, m_Edit_SendCstr.GetLength());
+//
+//	// 获取数据总长度
+//	int totalLength = m_Edit_SendCstr.GetLength();
+//
+//	// 计算分包数量
+//	int packetCount = (totalLength + PACKET_SIZE - 1) / PACKET_SIZE;
+//
+//	// 分包发送
+//	for (int i = 0; i < packetCount; i++)
+//	{
+//		// 计算当前包起始位置和长度
+//		int offset = i * PACKET_SIZE;
+//		int packetLength = min(PACKET_SIZE, totalLength - offset);
+//
+//		// 添加包头信息（每个字段后加空格）
+//		unsigned char packet[PACKET_SIZE + 7]; // 预留包头空间（原4字节+3个空格）
+//		packet[0] = i;                // 包序号
+//		packet[1] = ' ';              // 空格
+//		packet[2] = packetCount;      // 总包数
+//		packet[3] = ' ';              // 空格
+//		packet[4] = packetLength;     // 当前包长度
+//		packet[5] = ' ';              // 空格
+//
+//		// 拷贝数据
+//		memcpy(packet + 6, buff + offset, packetLength);
+//
+//		// 计算校验和（包含新增的空格）
+//		unsigned char checksum = 0;
+//		for (int j = 0; j < packetLength + 6; j++) {
+//			checksum ^= packet[j];
+//		}
+//		packet[packetLength + 6] = checksum;
+//
+//		// 发送数据包
+//		if (SendDatatoComm(packet, packetLength + 7, m_Check_HexsSend) == FALSE)
+//		{
+//			CString errorMsg;
+//			errorMsg.Format("发送第%d/%d包失败！", i + 1, packetCount);
+//			MessageBox(errorMsg, "错误", MB_OK + MB_ICONERROR);
+//			return;
+//		}
+//
+//		// 添加小延迟，防止串口缓冲区溢出
+//		Sleep(10);
+//	}
+//
+//	// 发送完成提示
+//	CString completeMsg;
+//	completeMsg.Format(_T("数据发送完成，共%d包"), packetCount);
+//	MessageBox(completeMsg, _T("发送完成"), MB_OK | MB_ICONINFORMATION);
+//
+//}
+
+void CMySScomDlg::SendPacketData()
+{
+	const int PACKET_SIZE = 240; // 每包240字节
+	unsigned char buff[MAX_SEND_BYTE] = {0};
+
+	GetDlgItemText(IDC_EDIT_SENDCSTR, m_Edit_SendCstr);
+
+	if (m_Edit_SendCstr.GetLength() <= 0) {
+		MessageBox("发送窗口内容为空，未发送任何数据！ ", "提示", MB_OK + MB_ICONINFORMATION);
+		return;
+	}
+
+	// 将字符串数据复制到缓冲区
+	strncpy_s((char*)&buff[0], sizeof(buff), (LPCTSTR)m_Edit_SendCstr, m_Edit_SendCstr.GetLength());
+
+	// 获取数据总长度
+	int totalLength = m_Edit_SendCstr.GetLength();
+
+	// 计算分包数量
+	int packetCount = totalLength  / PACKET_SIZE + 1;
+
+	LARGE_INTEGER freq, start, end;
+	QueryPerformanceFrequency(&freq); // 获取计时器频率
+
+	QueryPerformanceCounter(&start);
+
+	// 分包发送
+	for (int i = 0; i < packetCount; i++)
+	{
+		// 计算当前包起始位置和长度
+		int offset = i * PACKET_SIZE;
+		int packetLength = min(PACKET_SIZE, totalLength - offset);
+
+		// 直接使用原始数据，不添加包头
+		unsigned char packet[PACKET_SIZE] = {0};
+		memcpy(packet, buff + offset, packetLength);		
+
+		// 发送数据包
+		if (SendDatatoComm(packet, packetLength, m_Check_HexsSend) == FALSE)
+		{
+			CString errorMsg;
+			errorMsg.Format("发送第%d/%d包失败！", i + 1, packetCount);
+			MessageBox(errorMsg, "错误", MB_OK + MB_ICONERROR);
+			return;
+		}
+		QueryPerformanceCounter(&end);
+		double intervalMs = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+		start = end;
+
+		char buffer[64];
+		sprintf_s(buffer, "间隔: %.3fms\n", intervalMs);
+		OutputDebugStringA(buffer);
+
+		Sleep(20);
+	}
+
+	// 发送完成提示
+	CString completeMsg;
+	completeMsg.Format(_T("数据发送完成，共%d包"), packetCount);
+	MessageBox(completeMsg, _T("发送完成"), MB_OK | MB_ICONINFORMATION);
 }
 
 /**************************************************************************************************
@@ -1938,6 +2147,43 @@ void CMySScomDlg::OnButtonSendFile()
 	} else {                                                                   /* 正在发送过程中，则停止发送 */
 		s_FileDatPos = 0;
 		KillTimer(Timer_No_SendFile);                                          /* 关闭定时器 */
+		SetSendCtrlArea(TRUE);                                                 /* 恢复其他发送控件 */
+	}
+}
+
+void CMySScomDlg::OnButtonSendUnPackFile()
+{
+	CFile myFile;
+
+	if (s_FileDatPos == 0) {                                                   /* 尚未开始发送，则开始发送 */
+
+		GetDlgItemText(IDC_EDIT_FILEPATH, m_Edit_FilePath);
+
+		if (m_Edit_FilePath == "") {
+			MessageBox("您尚未指定需要发送的文件的路径！    ", "提示", MB_OK + MB_ICONINFORMATION);
+			return;
+		}
+
+		if (myFile.Open(m_Edit_FilePath, CFile::modeReadWrite | CFile::typeBinary) == 0) {
+			MessageBox("读取文件失败，请确认路径正确且文件未处于打开状态！    ", "提示", MB_OK + MB_ICONINFORMATION);
+			return;
+		}
+		else {
+			if (myFile.GetLength() <= 0) {
+				MessageBox("文件内容为空，发送终止！    ", "提示", MB_OK + MB_ICONINFORMATION);
+				return;
+			}
+			else {
+				s_FileDatPos = 0;
+				SetTimer(Timer_No_SendUnPackFile, FILESEND_BYTE, NULL);              /* 开启定时器 */
+				SetSendCtrlArea(FALSE);                                        /* 禁用其他发送控件 */
+				m_Progs_SendFile.SetPos(0);
+			}
+		}
+	}
+	else {                                                                   /* 正在发送过程中，则停止发送 */
+		s_FileDatPos = 0;
+		KillTimer(Timer_No_SendUnPackFile);                                          /* 关闭定时器 */
 		SetSendCtrlArea(TRUE);                                                 /* 恢复其他发送控件 */
 	}
 }
@@ -2569,6 +2815,15 @@ void CMySScomDlg::OnTimer(UINT nIDEvent)
 			UpdateStatusBarNow();
 			break;
 			
+		case Timer_No_SendUnPackFile:                                                /* 发送文件数据 */
+			if (SendFileDataPackstoComm() == FALSE) {                               /* 本次发送数据失败 */
+				s_FileDatPos = 0;
+				KillTimer(Timer_No_SendUnPackFile);                                  /* 停止发送 */
+				SetSendCtrlArea(TRUE);                                         /* 恢复其他发送控件 */
+			}
+			UpdateStatusBarNow();
+			break;
+
         default:
             return;
     }
@@ -2694,6 +2949,45 @@ void CMySScomDlg::OnSysCommand(UINT nID, LPARAM lParam)
 
 	CDialog::OnSysCommand(nID, lParam);
 }
+
+
+
+void CMySScomDlg::OnStnClickedStaticMs()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+
+
+void CMySScomDlg::OnNMCustomdrawProgressSendfile(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMCUSTOMDRAW pNMCD = reinterpret_cast<LPNMCUSTOMDRAW>(pNMHDR);
+
+	if (pNMCD->dwDrawStage == CDDS_PREPAINT) {
+		*pResult = CDRF_NOTIFYITEMDRAW; // 请求子项绘制通知
+	}
+	else if (pNMCD->dwDrawStage == CDDS_ITEMPREPAINT) {
+		// 修改进度条颜色（示例：蓝色进度）
+		if (pNMCD->dwItemSpec == PP_CHUNK) { // 进度部分
+			HBRUSH hBrush = CreateSolidBrush(RGB(0, 120, 215));
+			FillRect(pNMCD->hdc, &pNMCD->rc, hBrush);
+			DeleteObject(hBrush);
+			*pResult = CDRF_SKIPDEFAULT;
+		}
+		// 修改背景色（示例：浅灰色背景）
+		else if (pNMCD->dwItemSpec == PP_BAR) {
+			HBRUSH hBrush = CreateSolidBrush(RGB(240, 240, 240));
+			FillRect(pNMCD->hdc, &pNMCD->rc, hBrush);
+			DeleteObject(hBrush);
+			*pResult = CDRF_SKIPDEFAULT;
+		}
+	}
+	else {
+		*pResult = 0;
+	}
+}
+
 
 
 

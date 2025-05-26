@@ -19,6 +19,7 @@
 #define Timer_No_SendFile              0x05                                    /* 发送文件数据定时器 */
 #define Timer_No_SrAllSend             0x06                                    /* 全部数据自动连发的定时器 */
 #define Timer_No_SrEachSend            0x07                                    /* 各条数据自动连发的定时器 */
+#define Timer_No_SendUnPackFile        0x08                                    /* 发送分包文件数据定时器 */
 
 /*************************************************************************************************/
 /*                                     各字段参数名称定义                                        */
@@ -68,32 +69,6 @@
 
 #define MAINWIN_HEIGHT                 650                                     /* 可以显示提示信息的高度 */
 
-//#pragma pack(push, 1)
-//typedef struct {
-//	uint8_t header[2];    // 0xEE 0xCC
-//	uint16_t dataLen;     // 数据长度（小端）
-//	uint16_t year;      // 第4-5字节（高位在后）
-//	uint8_t month;      // 第6字节
-//	uint8_t day;        // 第7字节
-//	uint8_t hour;       // 第8字节
-//	uint8_t minute;     // 第9字节
-//	uint8_t second;     // 第10字节
-//	uint16_t millis;    // 第11-12字节（高位在后）
-//	int accuracy;     // 第13-16字节
-//	int latitude;     // 第17-20字节
-//	int height_ellipsoid; // 第21-24字节（椭球高）
-//	int height_sea;   // 第25-28字节（海拔高）
-//	int velocity_north; // 第29-32字节（北向速度）
-//	int velocity_east;  // 第33-36字节（东向速度）
-//	int velocity_ground;// 第37-40字节（地速）
-//	int speed_horizontal; // 第41-44字节（水平速度）
-//	int azimuth;       // 第45-48字节（方位角）
-//	uint32_t azimuth_accuracy; // 第49-52字节（方位角精度）
-//	int elevation;     // 第53-56字节（俯仰角）
-//	uint32_t elevation_accuracy; // 第57-60字节（俯仰角精度）
-//	uint8_t checksum;     // 校验和
-//} GNSS_Protocol;
-//#pragma pack(pop)
 
 class CMySScomDlg : public CDialog
 {
@@ -184,18 +159,18 @@ public:
 
 	CString GetHighExactTime(void);
 	bool SaveEditContent(void);
-	//bool DecodeAndSaveFile(const CString& inputFilePath, const CString& outputFilePath);
+
 	bool DecodeAndSaveToVariable(const CString& rawData, CString& outDecodedData);
-	//bool HexStrToBin(const CString& hexStr, CByteArray& binData);
-	//BYTE HexCharToValue(TCHAR ch);
-	//bool ParseProtocol(const BYTE* pData, DWORD dwSize, GNSS_Protocol& result);
 
 	void UpdateEditStr(CString showstr);
 	void HandleUSARTData(unsigned char *sbuf, DWORD len);
 	void NeedAutoSendData(void);
 	void UpdateStatusBarNow(void);
 	bool SendDatatoComm(unsigned char *sbuf, int slen, BOOL needhex);
+
 	bool SendFileDatatoComm(void);
+	bool SendFileDataPackstoComm();
+	void SendTestUSRLG207(void);
 
 	bool ConfigFileCanUse(CString target);
 	void CreateSettingFile(void);
@@ -291,6 +266,11 @@ protected:
 
 	DECLARE_EVENTSINK_MAP()
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnStnClickedStaticMs();
+	afx_msg void SendPacketData();
+	afx_msg void OnNMCustomdrawProgressSendfile(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnButtonSendUnPackFile();
 };
 
 

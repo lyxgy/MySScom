@@ -25,6 +25,7 @@ bool          ParseCStrisLegal(CString str);
 char    ConvertHexChar(char ch);
 int     String2Hex(CString str, CByteArray &senddata);
 CString TransformtoHex(CString InputStr);
+//unsigned char* BufferToHex(const unsigned char* data, int length, CString delimiter = " ");
 bool    CharisValid(unsigned char inchar);
 char    GetKeyValue(unsigned int keyvalue);
 
