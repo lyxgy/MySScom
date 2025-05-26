@@ -141,7 +141,7 @@ static UINT UpdateManageProc(LPVOID pParam)
 	CString tempstr, filestr;
 
 	#if RELEASE_VERSION == 1                                                   /* 先延时一段，以免影响用户其他操作 */
-	Sleep(30 * 1000);//原来30s
+	Sleep(1000);//原来30s
 	#else
 	Sleep(3 * 1000);
 	#endif

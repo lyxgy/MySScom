@@ -435,7 +435,7 @@ END
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION 0,2,1,0
- PRODUCTVERSION 0,1,0,0
+ PRODUCTVERSION 0,2,1,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -456,7 +456,7 @@ BEGIN
             VALUE "InternalName", "MySScom魔改版"
             VALUE "OriginalFilename", "MySScom.EXE"
             VALUE "ProductName", "MySScom 应用程序"
-            VALUE "ProductVersion", "0.1.0.0"
+            VALUE "ProductVersion", "0.2.1.0"
         END
     END
     BLOCK "VarFileInfo"
