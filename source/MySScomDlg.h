@@ -271,6 +271,9 @@ public:
 	afx_msg void SendPacketData();
 	afx_msg void OnNMCustomdrawProgressSendfile(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnButtonSendUnPackFile();
+	afx_msg void StrongTest();
+	afx_msg void OnEnChangeEditRecvcstr();
+	afx_msg void OnBnClickedStaticReceive();
 };
 
 

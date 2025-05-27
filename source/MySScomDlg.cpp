@@ -3,6 +3,7 @@
 #include "MySScomDlg.h"
 #include <cstdint>
 #include <string>
+#include <fstream>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -130,6 +131,9 @@ BEGIN_MESSAGE_MAP(CMySScomDlg, CDialog)
 	ON_BN_CLICKED(IDC_BUTTON1, &CMySScomDlg::SendPacketData)
 	ON_NOTIFY(NM_CUSTOMDRAW, IDC_PROGRESS_SENDFILE, &CMySScomDlg::OnNMCustomdrawProgressSendfile)
 	ON_BN_CLICKED(IDC_BUTTON2, &CMySScomDlg::OnButtonSendUnPackFile)
+	ON_BN_CLICKED(IDC_BUTTON3, &CMySScomDlg::StrongTest)
+	ON_EN_CHANGE(IDC_EDIT_RECVCSTR, &CMySScomDlg::OnEnChangeEditRecvcstr)
+	ON_BN_CLICKED(IDC_STATIC_RECEIVE, &CMySScomDlg::OnBnClickedStaticReceive)
 END_MESSAGE_MAP()
 
 BEGIN_EVENTSINK_MAP(CMySScomDlg, CDialog)
@@ -146,9 +150,11 @@ BEGIN_EASYSIZE_MAP(CMySScomDlg)
 	EASYSIZE(IDC_EDIT_SENDCSTR,     ES_BORDER,           ES_KEEPSIZE,        ES_BORDER,          ES_BORDER,        0)
 	EASYSIZE(IDC_PROGRESS_SENDFILE, ES_BORDER,           ES_KEEPSIZE,        ES_BORDER,          ES_BORDER,        0)
 	EASYSIZE(IDC_BUTTON_SEND,       ES_KEEPSIZE,         ES_KEEPSIZE,        ES_BORDER,          IDC_STATIC_SEND,  0)
+	EASYSIZE(IDC_BUTTON1,			ES_KEEPSIZE,         ES_KEEPSIZE,        ES_BORDER,          IDC_STATIC_SEND,  0)
 	EASYSIZE(IDC_EDIT_FILEPATH,     ES_BORDER,           ES_KEEPSIZE,        ES_BORDER,          ES_BORDER,        0)
 	EASYSIZE(IDC_BUTTON_OPENFILE,   ES_KEEPSIZE,         ES_KEEPSIZE,        ES_BORDER,          IDC_STATIC_SEND,  0)
 	EASYSIZE(IDC_BUTTON_SENDFILE,   ES_KEEPSIZE,         ES_KEEPSIZE,        ES_BORDER,          IDC_STATIC_SEND,  0)
+	EASYSIZE(IDC_BUTTON2,			ES_KEEPSIZE,         ES_KEEPSIZE,        ES_BORDER,          IDC_STATIC_SEND,  0)
 END_EASYSIZE_MAP
 
 
@@ -2991,3 +2997,75 @@ void CMySScomDlg::OnNMCustomdrawProgressSendfile(NMHDR* pNMHDR, LRESULT* pResult
 
 
 
+
+void CMySScomDlg::StrongTest()
+{
+	const int PACKET_SIZE = 200; // 每包240字节
+
+	LARGE_INTEGER freq, start, end;
+	QueryPerformanceFrequency(&freq);
+
+	// 直接按包生成和发送数据，避免拼接大字符串
+	for (int packetIndex = 0; packetIndex < 1000; ++packetIndex)
+	{
+
+		Sleep(150);
+
+		QueryPerformanceCounter(&start);
+
+		// 每包填充240个相同的数字字符（0-9）
+		char digit = '0' + packetIndex; // 当前数字对应的ASCII字符
+		unsigned char packet[PACKET_SIZE] = { 0 };
+
+		memset(packet, digit, PACKET_SIZE);
+
+		// 发送数据包
+		if (!SendDatatoComm(packet, PACKET_SIZE, m_Check_HexsSend))
+		{
+			CString errorMsg;
+			errorMsg.Format(_T("发送第%d包失败！"), packetIndex + 1);
+			MessageBox(errorMsg, _T("错误"), MB_OK | MB_ICONERROR);
+			return;
+		}
+
+		// 计算时间间隔
+		QueryPerformanceCounter(&end);
+		double intervalMs = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+		start = end;
+
+		// 调试输出
+		CString debugMsg;
+		debugMsg.Format(_T("%d,\t%.3fms\n"), packetIndex + 1, intervalMs);
+		OutputDebugString(debugMsg);
+
+		//std::ofstream outFile;
+		//outFile.open("Record\\test.csv", std::ios::out | std::ios::app);
+
+		//if (outFile.is_open()) {
+		//	// 将 CString 转为 std::string（多字节编码）
+		//	CT2A utf8Content(debugMsg, CP_UTF8); // 确保写入 UTF-8 格式
+		//	outFile << utf8Content.m_psz << std::endl;
+		//	outFile.close();
+		//}
+		//else {
+		//	AfxMessageBox(_T("无法打开 CSV 文件！"));
+		//}
+	}
+
+	MessageBox(_T("数据发送完成"), _T("发送完成"), MB_OK | MB_ICONINFORMATION);
+}
+
+void CMySScomDlg::OnEnChangeEditRecvcstr()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialog::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+}
+
+void CMySScomDlg::OnBnClickedStaticReceive()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
