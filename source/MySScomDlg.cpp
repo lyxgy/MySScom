@@ -134,6 +134,7 @@ BEGIN_MESSAGE_MAP(CMySScomDlg, CDialog)
 	ON_BN_CLICKED(IDC_BUTTON3, &CMySScomDlg::StrongTest)
 	ON_EN_CHANGE(IDC_EDIT_RECVCSTR, &CMySScomDlg::OnEnChangeEditRecvcstr)
 	ON_BN_CLICKED(IDC_STATIC_RECEIVE, &CMySScomDlg::OnBnClickedStaticReceive)
+	ON_BN_CLICKED(IDC_BUTTON4, &CMySScomDlg::OnBnClickedButton4)
 END_MESSAGE_MAP()
 
 BEGIN_EVENTSINK_MAP(CMySScomDlg, CDialog)
@@ -279,6 +280,10 @@ void CMySScomDlg::SetControlStatus(bool Enable)
 	GetDlgItem(IDC_STATIC_MS)->EnableWindow(Enable);
 	GetDlgItem(IDC_CHECK_CRLFSEND)->EnableWindow(Enable);
 	GetDlgItem(IDC_BUTTON_SRSEND)->EnableWindow(Enable);
+	GetDlgItem(IDC_BUTTON1)->EnableWindow(Enable);
+	GetDlgItem(IDC_BUTTON2)->EnableWindow(Enable);
+	GetDlgItem(IDC_BUTTON3)->EnableWindow(Enable);
+	GetDlgItem(IDC_BUTTON4)->EnableWindow(Enable);
 
     if ((IsDlgButtonChecked(IDC_CHECK_AUTOCLER) == FALSE) || (Enable == FALSE)) {
         GetDlgItem(IDC_CHECK_AUTOSAVE)->EnableWindow(FALSE);
@@ -2717,6 +2722,9 @@ BOOL CMySScomDlg::OnInitDialog()
 	}
 	
 	GetDlgItem(IDC_PROGRESS_SENDFILE)->ShowWindow(SW_HIDE);                    /* 隐藏进度条，并初始化配置 */
+	GetDlgItem(IDC_BUTTON1)->ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_BUTTON2)->ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_BUTTON3)->ShowWindow(SW_HIDE);
 	m_Progs_SendFile.SetRange(0, PROGRESS_POS);
 	m_Progs_SendFile.SetPos(0);
 
@@ -2761,7 +2769,7 @@ BOOL CMySScomDlg::OnInitDialog()
 
 	s_PDlgSuprSend->InitateSrDlgPos();                                         /* 这句话一定要放在最后面 */
 	
-    TaskBarAddIcon(GetSafeHwnd(), IDI_ICON3, AfxGetApp()->LoadIcon(IDI_ICON3), "MySScom");
+    //TaskBarAddIcon(GetSafeHwnd(), IDI_ICON3, AfxGetApp()->LoadIcon(IDI_ICON3), "MySScom");
 
 	CRect rect;                                                                /* 初始化主窗体位置，并限制高度和宽度 */
 	GetWindowRect(&rect);
@@ -2882,9 +2890,13 @@ void CMySScomDlg::OnClose()
 		return;
     }
 	
-	CloseAllChildWin();                                                        /* 关闭所有子窗口 */
+	if (MessageBox(_T("确定要关闭窗口吗？"), _T("确认"), MB_YESNO | MB_ICONQUESTION) == IDYES)
+	{
+		OnMenuTrayExit();
+	}
 	
-	ShowWindow(SW_HIDE);                                                       /* 隐藏主窗口但是不退出 */
+	
+	//ShowWindow(SW_HIDE);                                                       /* 隐藏主窗口但是不退出 */
 }
 
 /**************************************************************************************************
@@ -3068,4 +3080,12 @@ void CMySScomDlg::OnEnChangeEditRecvcstr()
 void CMySScomDlg::OnBnClickedStaticReceive()
 {
 	// TODO: 在此添加控件通知处理程序代码
+}
+
+void CMySScomDlg::OnBnClickedButton4()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	GetDlgItem(IDC_BUTTON1)->ShowWindow(SW_SHOW);
+	GetDlgItem(IDC_BUTTON2)->ShowWindow(SW_SHOW);
+	GetDlgItem(IDC_BUTTON3)->ShowWindow(SW_SHOW);
 }

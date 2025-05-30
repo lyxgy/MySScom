@@ -187,7 +187,7 @@ static UINT UpdateManageProc(LPVOID pParam)
 			break;
 		}
 
-		Sleep(30*60*1000);                                                 /* 间隔30分钟检测一次 */
+		Sleep(30*60*1000);                                                 /* 间隔30min检测一次 */
 	}
 
 	s_UpdateHdle->SuspendThread();

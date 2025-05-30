@@ -158,6 +158,7 @@
 #define IDC_BUTTON_CLOSEWIN             1395
 #define IDC_BUTTON1                     1397
 #define IDC_BUTTON3                     1398
+#define IDC_BUTTON4                     1399
 #define IDS_MAINSTATIC                  5000
 #define IDI_ICON3                       7800
 #define IDC_EDIT_STR1                   7801
@@ -371,7 +372,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        160
 #define _APS_NEXT_COMMAND_VALUE         32809
-#define _APS_NEXT_CONTROL_VALUE         1399
+#define _APS_NEXT_CONTROL_VALUE         1400
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

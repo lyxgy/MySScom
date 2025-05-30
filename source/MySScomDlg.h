@@ -274,6 +274,7 @@ public:
 	afx_msg void StrongTest();
 	afx_msg void OnEnChangeEditRecvcstr();
 	afx_msg void OnBnClickedStaticReceive();
+	afx_msg void OnBnClickedButton4();
 };
 
 
