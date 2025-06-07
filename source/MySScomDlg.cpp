@@ -135,6 +135,7 @@ BEGIN_MESSAGE_MAP(CMySScomDlg, CDialog)
 	ON_EN_CHANGE(IDC_EDIT_RECVCSTR, &CMySScomDlg::OnEnChangeEditRecvcstr)
 	ON_BN_CLICKED(IDC_STATIC_RECEIVE, &CMySScomDlg::OnBnClickedStaticReceive)
 	ON_BN_CLICKED(IDC_BUTTON4, &CMySScomDlg::OnBnClickedButton4)
+	ON_BN_CLICKED(IDC_BUTTON5, &CMySScomDlg::StopSending)
 END_MESSAGE_MAP()
 
 BEGIN_EVENTSINK_MAP(CMySScomDlg, CDialog)
@@ -284,6 +285,7 @@ void CMySScomDlg::SetControlStatus(bool Enable)
 	GetDlgItem(IDC_BUTTON2)->EnableWindow(Enable);
 	GetDlgItem(IDC_BUTTON3)->EnableWindow(Enable);
 	GetDlgItem(IDC_BUTTON4)->EnableWindow(Enable);
+	GetDlgItem(IDC_BUTTON5)->EnableWindow(Enable);
 
     if ((IsDlgButtonChecked(IDC_CHECK_AUTOCLER) == FALSE) || (Enable == FALSE)) {
         GetDlgItem(IDC_CHECK_AUTOSAVE)->EnableWindow(FALSE);
@@ -1203,63 +1205,100 @@ bool CMySScomDlg::SendFileDatatoComm(void)
 
 bool CMySScomDlg::SendFileDataPackstoComm()
 {
-		CFile filename;
-		const int FIXED_PACKET_SIZE = 240; // 固定每次发送240字节
-		unsigned long filetlen;
-		unsigned char filebuff[FIXED_PACKET_SIZE]; 
+	CFile filename;
+	const int FIXED_PACKET_SIZE = 200; // 固定每次发送200字节数据部分
+	const int HEADER_SIZE = 7;        // 包头长度
+	const int CHECKSUM_SIZE = 1;      // 校验和长度
+	const int MAX_PACKET_SIZE = HEADER_SIZE + FIXED_PACKET_SIZE + CHECKSUM_SIZE;
 
-		if (!filename.Open(m_Edit_FilePath, CFile::modeRead | CFile::typeBinary)) {
-			MessageBox("读取文件失败，请确认路径正确且文件未处于打开状态！", "提示", MB_OK + MB_ICONINFORMATION);
-			return FALSE;
-		}
+	unsigned long filetlen = 0;
+	unsigned char filebuff[FIXED_PACKET_SIZE] = { 0 };
+	unsigned char txBuffer[MAX_PACKET_SIZE] = { 0 };   // 完整数据包缓冲区 
 
-		filetlen = (unsigned long)filename.GetLength();
+	if (!filename.Open(m_Edit_FilePath, CFile::modeRead | CFile::typeBinary)) {
+		MessageBox("读取文件失败，请确认路径正确且文件未处于打开状态！", "提示", MB_OK + MB_ICONINFORMATION);
+		return FALSE;
+	}
 
-		// 计算本次实际发送量（不超过240字节）
-		int sendbyte = min(FIXED_PACKET_SIZE, (int)(filetlen - s_FileDatPos));
+	filetlen = (unsigned long)filename.GetLength();
 
-		filename.Seek(s_FileDatPos, CFile::begin);
-		filename.Read(filebuff, sendbyte);
+	// 计算本次实际发送量（不超过200字节）
+	int sendbyte = min(FIXED_PACKET_SIZE, (int)(filetlen - s_FileDatPos));
 
-		// 发送数据
-		int actualSent = SendSerialData(filebuff, sendbyte);
-		if (actualSent <= 0) {
-			MessageBox("发送失败！", "错误", MB_OK + MB_ICONERROR);
-			filename.Close();
-			return FALSE;
-		}
+	filename.Seek(s_FileDatPos, CFile::begin);
+	filename.Read(filebuff, sendbyte);
 
-		// 更新状态
-		s_FileDatPos += actualSent;
-		s_SendedByte += actualSent;
+	//添加包头
+	static uint16_t packetCounter = 1; // 数据包计数器
+	uint16_t TotalPackets = (filetlen + FIXED_PACKET_SIZE - 1) / FIXED_PACKET_SIZE;
+	txBuffer[0] = 0xEE;   // 包头标识1
+	txBuffer[1] = 0xCC;   // 包头标识2
+	txBuffer[2] = (packetCounter >> 8) & 0xFF; // 序号高字节
+	txBuffer[3] = packetCounter & 0xFF;        // 序号低字节
+	txBuffer[4] = (TotalPackets >> 8) & 0xFF;  // 总包数高字节
+	txBuffer[5] = TotalPackets & 0xFF;         // 总包数低字节
+	txBuffer[6] = static_cast<BYTE>(sendbyte);					   // 数据位数
 
-		// 计算剩余时间（基于波特率）
-		int baudrate = Combo_Baud[m_Combo_BaudRate.GetCurSel()];
-		double secondsPerByte = 10.0 / baudrate; // 每个字节的传输时间(ms)
-		int remainingTime = (int)((filetlen - s_FileDatPos) * secondsPerByte / 1000);
 
-		// 更新进度条（假设PROGRESS_POS=100）
-		m_Progs_SendFile.SetPos((int)(s_FileDatPos * 100.0 / filetlen));
+	// 2. 拷贝数据
+	memcpy(&txBuffer[HEADER_SIZE], filebuff, sendbyte);
 
-		// 更新状态文本
-		CString statusText;
-		statusText.Format(_T("进度: %d/%d字节 (%.1f%%) | 剩余时间: %d秒"),
-			s_FileDatPos, filetlen,
-			s_FileDatPos * 100.0 / filetlen,
-			remainingTime);
-		SetDlgItemText(IDC_STATIC_SEND, statusText);
+	// 3. 计算校验和
+	unsigned char checksum = 0;
+	for (int i = 0; i < HEADER_SIZE + sendbyte; i++) {
+		checksum ^= txBuffer[i];
+	}
+	txBuffer[HEADER_SIZE + sendbyte] = checksum; // 追加校验和
 
+	// ===== 发送完整数据包 =====
+	int actualSent = SendSerialData(txBuffer, HEADER_SIZE + sendbyte + CHECKSUM_SIZE);
+	if (actualSent <= 0) {
+		MessageBox("发送失败！", "错误", MB_OK + MB_ICONERROR);
 		filename.Close();
+		return FALSE;
+	}
+	packetCounter++;  // 更新包计数器
+	// 更新状态
+	s_FileDatPos += sendbyte;
+	s_SendedByte += actualSent;
 
-		// 检查是否发送完成
-		if (s_FileDatPos >= filetlen) {
-			s_FileDatPos = 0;
-			KillTimer(Timer_No_SendUnPackFile);
-			SetSendCtrlArea(TRUE);
-			MessageBox("文件发送完成！", "提示", MB_OK + MB_ICONINFORMATION);
-		}
+	// 计算剩余时间（基于波特率）
+	// 剩余数据字节数
+	int remainingData = filetlen - s_FileDatPos;
+	// 剩余包数（处理最后一包不满200字节的情况）
+	int remainingPackets = (remainingData + FIXED_PACKET_SIZE - 1) / FIXED_PACKET_SIZE;
+	// 剩余总字节数（含包头）
+	int remainingTotalBytes = remainingPackets * MAX_PACKET_SIZE;
 
-		return TRUE;
+	int baudrate = Combo_Baud[m_Combo_BaudRate.GetCurSel()];
+	double secondsPerByte = 10.0 / baudrate; // 每个字节的传输时间(s)
+	double remainingTime = remainingTotalBytes * secondsPerByte + remainingPackets * 0.15;
+
+	// 更新进度条（PROGRESS_POS=100）
+	m_Progs_SendFile.SetPos((int)(s_FileDatPos * 100.0 / filetlen));
+
+	// 更新状态文本
+	CString statusText;
+	statusText.Format(_T("进度: %d/%d字节 (%.1f%%) | 剩余时间: %.4f秒"),
+		s_FileDatPos, filetlen,
+		s_FileDatPos * 100.0 / filetlen,
+		remainingTime);
+	SetDlgItemText(IDC_STATIC_SEND, statusText);
+
+	filename.Close();
+
+	// 检查是否发送完成
+	if (s_FileDatPos >= filetlen) {
+		s_FileDatPos = 0;
+		packetCounter = 1;
+		KillTimer(Timer_No_SendUnPackFile);
+		SetSendCtrlArea(TRUE);
+		CString completeMsg;
+		completeMsg.Format(_T("数据发送完成，共%hu包"), TotalPackets);
+		MessageBox(completeMsg, _T("发送完成"), MB_OK | MB_ICONINFORMATION);
+	}
+
+	return TRUE;
 }
 
 /**************************************************************************************************
@@ -1983,10 +2022,14 @@ void CMySScomDlg::OnButtonSendData()
 //
 //}
 
+//void CMySScomDlg::SendPacketData()
+
 void CMySScomDlg::SendPacketData()
 {
-	const int PACKET_SIZE = 240; // 每包240字节
-	unsigned char buff[MAX_SEND_BYTE] = {0};
+	const int PACKET_SIZE = 200; // 每包200字节
+	const int HEADER_SIZE = 7;   // 包头大小
+	const int CHECKSUM_SIZE = 1; // 校验和大小
+	unsigned char buff[MAX_SEND_BYTE] = { 0 };
 
 	GetDlgItemText(IDC_EDIT_SENDCSTR, m_Edit_SendCstr);
 
@@ -1998,50 +2041,51 @@ void CMySScomDlg::SendPacketData()
 	// 将字符串数据复制到缓冲区
 	strncpy_s((char*)&buff[0], sizeof(buff), (LPCTSTR)m_Edit_SendCstr, m_Edit_SendCstr.GetLength());
 
-	// 获取数据总长度
 	int totalLength = m_Edit_SendCstr.GetLength();
+	uint16_t packetCount = (totalLength + PACKET_SIZE - 1) / PACKET_SIZE;
 
-	// 计算分包数量
-	int packetCount = totalLength  / PACKET_SIZE + 1;
-
-	LARGE_INTEGER freq, start, end;
-	QueryPerformanceFrequency(&freq); // 获取计时器频率
-
-	QueryPerformanceCounter(&start);
-
-	// 分包发送
-	for (int i = 0; i < packetCount; i++)
+	for (uint16_t i = 0; i < packetCount; i++)
 	{
-		// 计算当前包起始位置和长度
 		int offset = i * PACKET_SIZE;
-		int packetLength = min(PACKET_SIZE, totalLength - offset);
+		int dataLength = min(PACKET_SIZE, totalLength - offset); // 当前包有效数据长度
+		int packetLength = HEADER_SIZE + dataLength + CHECKSUM_SIZE; // 总包长=包头+数据+校验和
 
-		// 直接使用原始数据，不添加包头
-		unsigned char packet[PACKET_SIZE] = {0};
-		memcpy(packet, buff + offset, packetLength);		
+		// 创建带包头的缓冲区（初始化为0）
+		unsigned char packet[PACKET_SIZE + HEADER_SIZE + CHECKSUM_SIZE] = { 0 };
 
-		// 发送数据包
+		// ============= 包头 =============
+		packet[0] = 0xEE;                   // 包头标识
+		packet[1] = 0xCC;                   // 包头标识
+		packet[2] = (packetCount >> 8) & 0xFF;  
+		packet[3] = packetCount & 0xFF;			
+		packet[4] = (packetCount >> 8) & 0xFF;    // 总包数高字节
+		packet[5] = packetCount & 0xFF;			  // 总包数低字节
+		packet[6] = static_cast<BYTE>(dataLength);  // 本包数据长度
+
+		// 复制有效数据（放在包头后面）
+		memcpy(packet + HEADER_SIZE, buff + offset, dataLength);
+
+		// 计算范围：包头（5字节） + 数据（dataLength字节）
+		BYTE checksum = 0;
+		for (int j = 0; j < HEADER_SIZE + dataLength; j++) {
+			checksum ^= packet[j]; // 使用简单的异或校验
+		}
+		// 将校验和放在数据之后（即整个包的最后）
+		packet[HEADER_SIZE + dataLength] = checksum;
+
 		if (SendDatatoComm(packet, packetLength, m_Check_HexsSend) == FALSE)
 		{
 			CString errorMsg;
-			errorMsg.Format("发送第%d/%d包失败！", i + 1, packetCount);
+			errorMsg.Format("发送第%d/%hu包失败！", i + 1, packetCount);
 			MessageBox(errorMsg, "错误", MB_OK + MB_ICONERROR);
 			return;
 		}
-		QueryPerformanceCounter(&end);
-		double intervalMs = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
-		start = end;
 
-		char buffer[64];
-		sprintf_s(buffer, "间隔: %.3fms\n", intervalMs);
-		OutputDebugStringA(buffer);
-
-		Sleep(20);
+		Sleep(150);
 	}
 
-	// 发送完成提示
 	CString completeMsg;
-	completeMsg.Format(_T("数据发送完成，共%d包"), packetCount);
+	completeMsg.Format(_T("数据发送完成，共%hu包"), packetCount);
 	MessageBox(completeMsg, _T("发送完成"), MB_OK | MB_ICONINFORMATION);
 }
 
@@ -2710,7 +2754,8 @@ BOOL CMySScomDlg::OnInitDialog()
 	s_RecvedByte = 0;
 	s_SendedByte = 0;
 	s_FileDatPos = 0;
-
+	m_bButtonsVisible = false;
+	
 	QueryPerformanceCounter(&litmp);
 	s_StartdTcik = litmp.QuadPart;                                             /* 获得初始值 */
 
@@ -2725,6 +2770,7 @@ BOOL CMySScomDlg::OnInitDialog()
 	GetDlgItem(IDC_BUTTON1)->ShowWindow(SW_HIDE);
 	GetDlgItem(IDC_BUTTON2)->ShowWindow(SW_HIDE);
 	GetDlgItem(IDC_BUTTON3)->ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_BUTTON5)->ShowWindow(SW_HIDE);
 	m_Progs_SendFile.SetRange(0, PROGRESS_POS);
 	m_Progs_SendFile.SetPos(0);
 
@@ -3012,20 +3058,20 @@ void CMySScomDlg::OnNMCustomdrawProgressSendfile(NMHDR* pNMHDR, LRESULT* pResult
 
 void CMySScomDlg::StrongTest()
 {
-	const int PACKET_SIZE = 200; // 每包240字节
+	const int PACKET_SIZE = 200; // 每包200字节
 
 	LARGE_INTEGER freq, start, end;
 	QueryPerformanceFrequency(&freq);
 
 	// 直接按包生成和发送数据，避免拼接大字符串
-	for (int packetIndex = 0; packetIndex < 1000; ++packetIndex)
+	for (int packetIndex = 0; packetIndex < 500; ++packetIndex)
 	{
 
 		Sleep(150);
 
 		QueryPerformanceCounter(&start);
 
-		// 每包填充240个相同的数字字符（0-9）
+		// 每包填充200个相同的数字字符（0-9）
 		char digit = '0' + packetIndex; // 当前数字对应的ASCII字符
 		unsigned char packet[PACKET_SIZE] = { 0 };
 
@@ -3050,18 +3096,6 @@ void CMySScomDlg::StrongTest()
 		debugMsg.Format(_T("%d,\t%.3fms\n"), packetIndex + 1, intervalMs);
 		OutputDebugString(debugMsg);
 
-		//std::ofstream outFile;
-		//outFile.open("Record\\test.csv", std::ios::out | std::ios::app);
-
-		//if (outFile.is_open()) {
-		//	// 将 CString 转为 std::string（多字节编码）
-		//	CT2A utf8Content(debugMsg, CP_UTF8); // 确保写入 UTF-8 格式
-		//	outFile << utf8Content.m_psz << std::endl;
-		//	outFile.close();
-		//}
-		//else {
-		//	AfxMessageBox(_T("无法打开 CSV 文件！"));
-		//}
 	}
 
 	MessageBox(_T("数据发送完成"), _T("发送完成"), MB_OK | MB_ICONINFORMATION);
@@ -3084,8 +3118,20 @@ void CMySScomDlg::OnBnClickedStaticReceive()
 
 void CMySScomDlg::OnBnClickedButton4()
 {
+	// 切换状态
+	m_bButtonsVisible = !m_bButtonsVisible;
+
+	// 根据新状态设置显示/隐藏
+	int nCmd = m_bButtonsVisible ? SW_SHOW : SW_HIDE;
+
+	GetDlgItem(IDC_BUTTON1)->ShowWindow(nCmd);
+	GetDlgItem(IDC_BUTTON2)->ShowWindow(nCmd);
+	GetDlgItem(IDC_BUTTON3)->ShowWindow(nCmd);
+	GetDlgItem(IDC_BUTTON5)->ShowWindow(nCmd);
+}
+
+void CMySScomDlg::StopSending()
+{
 	// TODO: 在此添加控件通知处理程序代码
-	GetDlgItem(IDC_BUTTON1)->ShowWindow(SW_SHOW);
-	GetDlgItem(IDC_BUTTON2)->ShowWindow(SW_SHOW);
-	GetDlgItem(IDC_BUTTON3)->ShowWindow(SW_SHOW);
+
 }

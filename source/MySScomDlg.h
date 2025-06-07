@@ -55,9 +55,9 @@
 #define CHNGLINE_INTERVAL              100                                     /* 16进制模式下判断帧换行的延迟时间 (单位: 毫秒) */
 #define STATUSBAR_TIME                 1000                                    /* 状态栏刷新时间间隔 (单位: 毫秒) */
 
-#define FILESEND_BYTE                  100                                     /* 发送文件时每次发送的字节数 */
+#define FILESEND_BYTE                  150                                     /* 发送文件时每次发送的字节数 */
 
-#define PROGRESS_POS                   1000                                    /* 进度条最小进度刻度 */
+#define PROGRESS_POS                   100                                    /* 进度条最小进度刻度 */
 
 #define MIN_WIN_WIDTH                  860                                     /* 窗体宽度最小值 */
 #define MIN_WIN_HIGHT                  540                                     /* 窗体高度最小值 */
@@ -191,7 +191,7 @@ public:
 
 	BOOL TaskBarAddIcon(HWND hwnd, UINT uID, HICON hicon, LPSTR lpszTip);
 	BOOL TaskBarDeleteIcon(HWND hwnd, UINT uID);
-
+	bool m_bButtonsVisible;
 protected:
 	CToolTipCtrl m_tooltip;
 	HICON m_hIcon;
@@ -275,6 +275,7 @@ public:
 	afx_msg void OnEnChangeEditRecvcstr();
 	afx_msg void OnBnClickedStaticReceive();
 	afx_msg void OnBnClickedButton4();
+	afx_msg void StopSending();
 };
 
 
