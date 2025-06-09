@@ -1205,6 +1205,10 @@ bool CMySScomDlg::SendFileDatatoComm(void)
 
 bool CMySScomDlg::SendFileDataPackstoComm()
 {
+	LARGE_INTEGER freq, start, end;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+
 	CFile filename;
 	const int FIXED_PACKET_SIZE = 200; // 固定每次发送200字节数据部分
 	const int HEADER_SIZE = 7;        // 包头长度
@@ -1257,6 +1261,16 @@ bool CMySScomDlg::SendFileDataPackstoComm()
 		filename.Close();
 		return FALSE;
 	}
+	// 计算时间间隔
+	QueryPerformanceCounter(&end);
+	double intervalMs = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+	start = end;
+
+	// 调试输出
+	CString debugMsg;
+	debugMsg.Format(_T("time=%.3fms\n"), intervalMs);
+	OutputDebugString(debugMsg);
+
 	packetCounter++;  // 更新包计数器
 	// 更新状态
 	s_FileDatPos += sendbyte;
@@ -1293,9 +1307,14 @@ bool CMySScomDlg::SendFileDataPackstoComm()
 		packetCounter = 1;
 		KillTimer(Timer_No_SendUnPackFile);
 		SetSendCtrlArea(TRUE);
+
+		
+
 		CString completeMsg;
 		completeMsg.Format(_T("数据发送完成，共%hu包"), TotalPackets);
 		MessageBox(completeMsg, _T("发送完成"), MB_OK | MB_ICONINFORMATION);
+
+		
 	}
 
 	return TRUE;
@@ -2026,6 +2045,10 @@ void CMySScomDlg::OnButtonSendData()
 
 void CMySScomDlg::SendPacketData()
 {
+	LARGE_INTEGER freq, start, end;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+
 	const int PACKET_SIZE = 200; // 每包200字节
 	const int HEADER_SIZE = 7;   // 包头大小
 	const int CHECKSUM_SIZE = 1; // 校验和大小
@@ -2044,8 +2067,10 @@ void CMySScomDlg::SendPacketData()
 	int totalLength = m_Edit_SendCstr.GetLength();
 	uint16_t packetCount = (totalLength + PACKET_SIZE - 1) / PACKET_SIZE;
 
+	
 	for (uint16_t i = 0; i < packetCount; i++)
 	{
+		
 		int offset = i * PACKET_SIZE;
 		int dataLength = min(PACKET_SIZE, totalLength - offset); // 当前包有效数据长度
 		int packetLength = HEADER_SIZE + dataLength + CHECKSUM_SIZE; // 总包长=包头+数据+校验和
@@ -2083,10 +2108,21 @@ void CMySScomDlg::SendPacketData()
 
 		Sleep(150);
 	}
+	// 计算时间间隔
+	QueryPerformanceCounter(&end);
+	double intervalMs = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+	start = end;
+
+	// 调试输出
+	CString debugMsg;
+	debugMsg.Format(_T("time=%.3fms\n"), intervalMs);
+	OutputDebugString(debugMsg);
 
 	CString completeMsg;
 	completeMsg.Format(_T("数据发送完成，共%hu包"), packetCount);
 	MessageBox(completeMsg, _T("发送完成"), MB_OK | MB_ICONINFORMATION);
+
+	
 }
 
 /**************************************************************************************************
@@ -3062,17 +3098,15 @@ void CMySScomDlg::StrongTest()
 
 	LARGE_INTEGER freq, start, end;
 	QueryPerformanceFrequency(&freq);
-
+	QueryPerformanceCounter(&start);
 	// 直接按包生成和发送数据，避免拼接大字符串
-	for (int packetIndex = 0; packetIndex < 500; ++packetIndex)
+	for (int packetIndex = 0; packetIndex < 234000; ++packetIndex)
 	{
 
 		Sleep(150);
-
-		QueryPerformanceCounter(&start);
-
+		
 		// 每包填充200个相同的数字字符（0-9）
-		char digit = '0' + packetIndex; // 当前数字对应的ASCII字符
+		char digit = ('0' + packetIndex)%10; // 当前数字对应的ASCII字符
 		unsigned char packet[PACKET_SIZE] = { 0 };
 
 		memset(packet, digit, PACKET_SIZE);
@@ -3086,19 +3120,16 @@ void CMySScomDlg::StrongTest()
 			return;
 		}
 
-		// 计算时间间隔
-		QueryPerformanceCounter(&end);
-		double intervalMs = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
-		start = end;
-
-		// 调试输出
-		CString debugMsg;
-		debugMsg.Format(_T("%d,\t%.3fms\n"), packetIndex + 1, intervalMs);
-		OutputDebugString(debugMsg);
-
 	}
+	// 计算时间间隔
+	QueryPerformanceCounter(&end);
+	double intervalMs = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+	start = end;
 
-	MessageBox(_T("数据发送完成"), _T("发送完成"), MB_OK | MB_ICONINFORMATION);
+	// 调试输出
+	CString debugMsg;
+	debugMsg.Format(_T("%.3fms\n"), intervalMs);
+	OutputDebugString(debugMsg);
 }
 
 void CMySScomDlg::OnEnChangeEditRecvcstr()
@@ -3133,5 +3164,37 @@ void CMySScomDlg::OnBnClickedButton4()
 void CMySScomDlg::StopSending()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	CFile myFile;
 
+	if (s_FileDatPos == 0) {                                                   /* 尚未开始发送，则开始发送 */
+
+		GetDlgItemText(IDC_EDIT_FILEPATH, m_Edit_FilePath);
+
+		if (m_Edit_FilePath == "") {
+			MessageBox("您尚未指定需要发送的文件的路径！    ", "提示", MB_OK + MB_ICONINFORMATION);
+			return;
+		}
+
+		if (myFile.Open(m_Edit_FilePath, CFile::modeReadWrite | CFile::typeBinary) == 0) {
+			MessageBox("读取文件失败，请确认路径正确且文件未处于打开状态！    ", "提示", MB_OK + MB_ICONINFORMATION);
+			return;
+		}
+		else {
+			if (myFile.GetLength() <= 0) {
+				MessageBox("文件内容为空，发送终止！    ", "提示", MB_OK + MB_ICONINFORMATION);
+				return;
+			}
+			else {
+				s_FileDatPos = 0;
+				SetTimer(Timer_No_SendUnPackFile, FILESEND_BYTE, NULL);              /* 开启定时器 */
+				SetSendCtrlArea(FALSE);                                        /* 禁用其他发送控件 */
+				m_Progs_SendFile.SetPos(0);
+			}
+		}
+	}
+	else {                                                                   /* 正在发送过程中，则停止发送 */
+		s_FileDatPos = 0;
+		KillTimer(Timer_No_SendUnPackFile);                                          /* 关闭定时器 */
+		SetSendCtrlArea(TRUE);                                                 /* 恢复其他发送控件 */
+	}
 }
